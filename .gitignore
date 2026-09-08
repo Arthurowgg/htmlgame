@@ -2,3 +2,4 @@
 desktop/gpg-bundle.cjs
 desktop/blobs.o
 *.exe
+__pycache__/
