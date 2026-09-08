@@ -1,4 +1,4 @@
-// GRAND PIXEL GAME — renderizador WebGL: voxel flat-color + sprites pixel + brilhos
+// SOLARIA — renderizador WebGL: terreno voxel, sprites e brilhos
 // Toda a transformação de câmera é feita na GPU via matrizes (view/projeção);
 // a CPU só envia vértices do mundo e calcula animações leves (água, partículas).
 import { TS, WATER_Y, CHUNK } from './world.js';
@@ -16,10 +16,11 @@ void main(){
 const FS_TER = `
 precision mediump float;
 varying vec4 vCol; varying float vDist;
-uniform vec3 uFog;
+uniform vec3 uFog; uniform vec3 uTint;
 void main(){
+  vec3 lit = vCol.rgb * uTint;
   float f = vDist * vDist * (3.0 - 2.0 * vDist);
-  gl_FragColor = vec4(mix(vCol.rgb, uFog, f), vCol.a);
+  gl_FragColor = vec4(mix(lit, uFog, f), vCol.a);
 }`;
 
 const VS_SPR = `
@@ -34,11 +35,12 @@ void main(){
 const FS_SPR = `
 precision mediump float;
 varying vec2 vUv; varying vec3 vTint; varying float vFog; varying float vAlpha;
-uniform sampler2D uTex; uniform vec3 uFog;
+uniform sampler2D uTex; uniform vec3 uFog; uniform vec3 uTint;
 void main(){
   vec4 t = texture2D(uTex, vUv);
   if (t.a < 0.12) discard;
-  vec3 c = mix(t.rgb * vTint, uFog, vFog * vFog * (3.0 - 2.0 * vFog));
+  vec3 lit = t.rgb * vTint * uTint;
+  vec3 c = mix(lit, uFog, vFog * vFog * (3.0 - 2.0 * vFog));
   gl_FragColor = vec4(c, t.a * vAlpha);
 }`;
 
@@ -59,17 +61,29 @@ const FS_SKY = `
 precision mediump float;
 varying vec2 vP;
 uniform vec3 cTop; uniform vec3 cMid; uniform vec3 cBot;
+uniform float uStars;
+uniform vec2 uDisc;      // posição do sol/lua (NDC)
+uniform vec3 uDCol;      // cor do núcleo do disco
+uniform vec3 uDCol2;     // cor do halo
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
 void main(){
   float y = vP.y;
-  vec3 c = mix(cBot, cMid, smoothstep(0.16, 0.58, y));
-  c = mix(c, cTop, smoothstep(0.6, 0.98, y));
-  // lua crepuscular com halo (halo forte perto do núcleo, decaindo para fora)
-  vec2 lu = vec2(0.76, 0.88);
-  float d = distance(vP, lu);
-  c = mix(c, vec3(0.36, 0.42, 0.62), 0.45 * (1.0 - smoothstep(0.02, 0.09, d)));
-  c = mix(c, vec3(1.0, 0.98, 0.88), 0.95 * (1.0 - smoothstep(0.022, 0.06, d)));
-  // brilho no horizonte (mais forte na linha do chão, some subindo)
-  c += vec3(0.14, 0.09, 0.11) * (1.0 - smoothstep(0.05, 0.22, y)) * 0.9;
+  vec3 c = mix(cBot, cMid, smoothstep(0.14, 0.55, y));
+  c = mix(c, cTop, smoothstep(0.58, 0.98, y));
+  // estrelas (só no céu escuro)
+  vec2 cell = floor(vP * vec2(150.0, 90.0));
+  float st = hash(cell);
+  float tw = 0.5 + 0.5 * sin(hash(cell + 7.0) * 60.0 + uStars * 40.0);
+  if (st > 0.975 && vP.y > 0.35) {
+    float a = uStars * smoothstep(0.975, 1.0, st) * tw;
+    c += vec3(1.0, 0.98, 0.9) * a * 0.9;
+  }
+  // disco do sol/lua com halo suave
+  float d = distance(vP, uDisc);
+  c = mix(c, uDCol2, uDCol2.a * (1.0 - smoothstep(0.03, 0.12, d)));
+  c = mix(c, uDCol.rgb, uDCol.a * (1.0 - smoothstep(0.0, 0.03, d)));
+  // brilho quente do horizonte
+  c += vec3(0.20, 0.12, 0.13) * (1.0 - smoothstep(0.04, 0.20, y)) * 0.55;
   gl_FragColor = vec4(c, 1.0);
 }`;
 
@@ -79,8 +93,9 @@ export const ART = {
   slime: 13, flower0: 14, flower1: 15, flower2: 16, flower3: 17, flower4: 18,
   npc0: 19, npc1: 20, npc2: 21, hero: 22, shadow: 23,
   bush: 24, berry: 25, ore: 26, shell: 27, essence: 28, shrine: 29, wisp: 30,
+  golem: 31, gate: 32, portal: 33, selo: 34, ship: 35,
 };
-const NARTS = 31;
+const NARTS = 36;
 const CELL = 40;
 
 function compile(gl, vs, fs) {
@@ -413,14 +428,74 @@ export class SpriteAtlas {
       px(2, 3, '#cc0000'); px(5, 3, '#cc0000');
       px(2, 2, '#ff8800'); px(5, 2, '#ff8800');
     });
+    // ---- artes novas (índices 31..35) ----
+    // golem: golem de pedra com núcleo brilhante
+    at(ART.golem, 14, 17, px => {
+      const st = ['#8d9198', '#767b83', '#5f646c'];
+      for (let y = 8; y < 14; y++) for (let dx = 2; dx < 12; dx++) px(dx, y, y > 12 ? st[2] : st[0]);
+      for (let dx = 0; dx < 3; dx++) { px(dx, 5 + dx * 2, st[1]); px(11 + dx, 7 - dx, st[1]); }
+      px(4, 7, st[2]); px(5, 7, '#9bf7ff'); px(6, 7, '#d8feff'); px(7, 7, '#7fdbe8'); px(9, 7, st[2]);
+      for (let y = 3; y < 8; y++) for (let dx = 3; dx < 11; dx++) px(dx, y, st[0]);
+      px(3, 2, st[1]); px(4, 1, st[0]); px(5, 1, st[0]); px(6, 1, st[0]); px(7, 1, st[1]);
+      px(8, 2, st[0]); px(9, 2, st[1]); px(10, 3, st[1]);
+      px(4, 4, '#16181e'); px(9, 4, '#16181e'); px(4, 3, '#e8edf5'); px(9, 3, '#c8cdd6');
+      px(4, 8, st[2]); px(9, 8, st[2]); px(6, 5, '#9bf7ff');
+      px(3, 14, st[2]); px(10, 14, st[2]); px(4, 15, st[2]); px(5, 15, st[2]); px(8, 15, st[2]); px(9, 15, st[2]);
+      px(2, 5, st[1]); px(11, 7, st[1]); px(3, 6, '#5f646c'); px(10, 6, '#5f646c');
+    });
+    // gate: arco de pedra escura com vazio violeta
+    at(ART.gate, 13, 16, px => {
+      for (let y = 0; y < 10; y++) { px(0, y + 2, '#3a3f4c'); px(1, y + 2, '#4c5264'); px(11, y + 2, '#3a3f4c'); px(12, y + 2, '#4c5264'); }
+      px(2, 10, '#2a2e3a'); px(10, 10, '#2a2e3a');
+      for (let y = 0; y < 7; y++) { px(2, 2 + y, '#4c5264'); px(10, 2 + y, '#4c5264'); }
+      px(3, 8, '#4c5264'); px(9, 8, '#4c5264'); px(4, 7, '#4c5264'); px(8, 7, '#4c5264'); px(5, 6, '#4c5264'); px(7, 6, '#4c5264');
+      for (let y = 8; y < 15; y++) for (let dx = 3; dx < 10; dx++) px(dx, y, (y + dx) % 3 ? '#191425' : '#241b38');
+      px(4, 13, '#8a6bff'); px(7, 13, '#6b8aff'); px(5, 14, '#3a2a5a'); px(6, 14, '#3a2a5a');
+      px(1, 0, '#8d9198'); px(2, 0, '#aeb4bd'); px(10, 0, '#aeb4bd'); px(11, 0, '#8d9198');
+      px(0, 1, '#767b83');
+    });
+    // portal: vórtice de energia
+    at(ART.portal, 10, 12, px => {
+      for (let y = 1; y < 11; y++) for (let dx = 1; dx < 9; dx++) {
+        const d = Math.abs(dx - 4.5) + Math.abs(y - 5.5);
+        if (d > 6) px(dx, y, '#1a1626');
+        else px(dx, y, '#241b3a');
+      }
+      const ring = (cx, cy, r, c1, c2) => {
+        for (let a = 0; a < 24; a++) {
+          const x = Math.round(cx + Math.cos(a / 24 * 6.283) * r);
+          const y = Math.round(cy + Math.sin(a / 24 * 6.283) * r * 0.82);
+          px(x, y, a % 2 ? c1 : c2);
+        }
+      };
+      ring(4.5, 5.5, 3.6, '#b18cff', '#7a5cff'); ring(4.5, 5.5, 2.2, '#e4d6ff', '#9c7aff');
+      px(4, 4, '#ffffff'); px(5, 5, '#ffffff'); px(4, 6, '#e4d6ff'); px(5, 7, '#c9b0ff');
+    });
+    // selo: pedra de selo com runa de luz
+    at(ART.selo, 12, 6, px => {
+      px(0, 3, '#8a8f98'); px(1, 2, '#9aa0aa'); px(10, 2, '#9aa0aa'); px(11, 3, '#8a8f98');
+      for (let dx = 1; dx < 11; dx++) px(dx, 3, '#767b83');
+      px(2, 1, '#a7adb8'); px(9, 1, '#a7adb8'); px(3, 0, '#c2c7d0'); px(8, 0, '#c2c7d0'); px(4, 0, '#ffd76a'); px(7, 0, '#ffd76a');
+      px(5, 1, '#ffe9a8'); px(6, 1, '#ffe9a8'); px(5, 2, '#ffb35c'); px(6, 2, '#ffb35c');
+    });
+    // ship: casco naufragado
+    at(ART.ship, 15, 7, px => {
+      px(0, 5, '#3a2a1c'); px(1, 4, '#4d3824'); px(13, 4, '#4d3824'); px(14, 5, '#3a2a1c');
+      for (let dx = 1; dx < 14; dx++) { px(dx, 5, '#5a4228'); px(dx, 6, '#3a2a1c'); }
+      px(1, 3, '#6b4f30'); px(2, 3, '#7a5c38'); px(3, 3, '#6b4f30'); px(4, 3, '#7a5c38'); px(10, 3, '#6b4f30'); px(11, 3, '#5a4228'); px(12, 3, '#6b4f30');
+      px(3, 2, '#8a6a40'); px(4, 2, '#7a5c38'); px(10, 2, '#8a6a40');
+      px(12, 0, '#4d3824'); px(12, 1, '#5a4228'); px(13, 1, '#4d3824'); px(13, 2, '#5a4228');
+      px(8, 1, '#c9a23c'); px(9, 1, '#c9a23c');
+    });
   }
   upload(gl) {
     this.tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.canvas);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.bindTexture(gl.TEXTURE_2D, null);
@@ -431,7 +506,7 @@ export class Renderer {
   constructor(canvas, world) {
     this.canvas = canvas;
     this.world = world;
-    const gl = this.gl = canvas.getContext('webgl', { antialias: false, alpha: false, depth: true });
+    const gl = this.gl = canvas.getContext('webgl', { antialias: true, alpha: false, depth: true, powerPreference: 'high-performance' });
     if (!gl) throw new Error('WebGL indisponível');
     this.pTer = compile(gl, VS_TER, FS_TER);
     this.pSpr = compile(gl, VS_SPR, FS_SPR);
@@ -442,10 +517,10 @@ export class Renderer {
       for (const n of names) u[n] = gl.getUniformLocation(p, n);
       return u;
     };
-    this.uTer = mkU(this.pTer, ['uMVP', 'uEye', 'uFogA', 'uInvSpan', 'uFog']);
-    this.uSpr = mkU(this.pSpr, ['uTex', 'uMVP', 'uEye', 'uFogA', 'uInvSpan', 'uFog']);
+    this.uTer = mkU(this.pTer, ['uMVP', 'uEye', 'uFogA', 'uInvSpan', 'uFog', 'uTint']);
+    this.uSpr = mkU(this.pSpr, ['uTex', 'uMVP', 'uEye', 'uFogA', 'uInvSpan', 'uFog', 'uTint']);
     this.uGlow = mkU(this.pGlow, ['uMVP']);
-    this.uSky = mkU(this.pSky, ['cTop', 'cMid', 'cBot']);
+    this.uSky = mkU(this.pSky, ['cTop', 'cMid', 'cBot', 'uStars', 'uDisc', 'uDCol', 'uDCol2']);
     this.bufs = { spr: gl.createBuffer(), glow: gl.createBuffer(), dyn: gl.createBuffer(), sky: gl.createBuffer() };
     this.terBufs = {}; // cache de buffers de terreno por chunk/banda
     this.skyVerts = new Float32Array([-1, -1, 3, -1, -1, 3]);
@@ -515,9 +590,18 @@ export class Renderer {
     const loc = this.attrLoc(this.pSky, 'aPos');
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    gl.uniform3f(this.uSky.cTop, 0.012, 0.011, 0.032);
-    gl.uniform3f(this.uSky.cMid, 0.115, 0.075, 0.16);
-    gl.uniform3f(this.uSky.cBot, 0.44, 0.24, 0.32);
+    const e = this._env || {};
+    gl.uniform3f(this.uSky.cTop, e.top ? e.top[0] : 0.012, e.top ? e.top[1] : 0.011, e.top ? e.top[2] : 0.032);
+    gl.uniform3f(this.uSky.cMid, e.mid ? e.mid[0] : 0.115, e.mid ? e.mid[1] : 0.075, e.mid ? e.mid[2] : 0.16);
+    gl.uniform3f(this.uSky.cBot, e.bot ? e.bot[0] : 0.44, e.bot ? e.bot[1] : 0.24, e.bot ? e.bot[2] : 0.32);
+    const stars = e.stars !== undefined ? e.stars : 0;
+    gl.uniform1f(this.uSky.uStars, stars);
+    const d = e.disc || { x: 0.76, y: 0.3 };
+    gl.uniform2f(this.uSky.uDisc, d.x, d.y);
+    const dc = e.discCol || { r: 1, g: 0.98, b: 0.88, a: 0 };
+    const dc2 = e.discCol2 || { r: 1, g: 0.95, b: 0.8, a: 0 };
+    gl.uniform4f(this.uSky.uDCol, dc.r, dc.g, dc.b, dc.a);
+    gl.uniform4f(this.uSky.uDCol2, dc2.r, dc2.g, dc2.b, dc2.a);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.depthMask(true);
   }
@@ -531,6 +615,8 @@ export class Renderer {
     const fogB = this.cam.fogB !== undefined ? this.cam.fogB : 215;
     gl.uniform1f(u.uFogA, fogA);
     gl.uniform1f(u.uInvSpan, 1 / Math.max(1, fogB - fogA));
+    const t = this._envTint || [1, 1, 1];
+    gl.uniform3f(u.uTint, t[0], t[1], t[2]);
     return { fogA, fogB };
   }
   _terrain(fogC, time) {
@@ -758,15 +844,20 @@ export class Renderer {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(true);
   }
-  render(cam, time, entities, glows) {
+  render(cam, time, entities, glows, env) {
     const gl = this.gl;
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     this.setCam(cam.x, cam.y, cam.z, cam.yaw, cam.pitch, 1.12,
       cam.fogA !== undefined ? cam.fogA : 70, cam.fogB !== undefined ? cam.fogB : 215);
     this._fid = (this._fid || 0) + 1;
+    this._env = env || null;
+    this._envTint = env && env.tint ? env.tint : [1, 1, 1];
     this._sky();
-    const fogC = [0.17, 0.11, 0.18];
+    let fogC;
+    if (env && env.fog) fogC = env.fog;
+    else if (env) fogC = [env.bot[0] * 0.5, env.bot[1] * 0.42, env.bot[2] * 0.5];
+    else fogC = [0.17, 0.11, 0.18];
     this._fogC = fogC;
     this._terrain(fogC, time || 0);
     if (entities && entities.length) this._sprites(entities, fogC);

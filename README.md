@@ -1,11 +1,19 @@
-# GRAND PIXEL GAME
+# Solaria — o chamado da luz
 
-Jogo **3D voxel pixelado** em mundo aberto, com fonte bitmap 8-bit, cutscene de
-abertura, menu principal completo e **34 missões** (3 da história + 31
-secundárias). Mundo ~4x maior que a versão anterior: vila, campo radiante,
-clareira, templo antigo, floresta dos sussurros, penhascos da mina, praia das
-conchas e santuário do cume. WebGL puro + Canvas 2D — sem dependências, sem
-build, sem rede.
+Jogo 3D voxel em mundo aberto, direto no navegador — WebGL puro + Canvas 2D,
+sem dependências, sem build, sem rede. O vale de Solaria tem **70 missões**
+(11 capítulos da história + 59 secundárias), **10 artefatos míticos** e
+chefes de verdade (Golem do Vale, Matriarca dos Sussurros e o Guardião
+Sombrio da Cripta Esquecida).
+
+## O mundo
+
+Oito regiões clássicas — vila de Solaria, Campo Radiante, Clareira das
+Lágrimas, Templo Antigo, Floresta dos Sussurros, Penhascos da Mina, Praia das
+Conchas e Santuário do Cume — mais duas novas: a **Ilha do Recife**
+(nordeste, do outro lado do mar) e a **Cripta Esquecida** (meseta no sudoeste,
+casa do chefe final). O dia e a noite passam com estrelas, sol e lua; a Cripta
+tem atmosfera própria.
 
 ## Como rodar
 
@@ -15,84 +23,48 @@ Sirva a pasta por um servidor estático (ES modules exigem http, não `file://`)
 python3 -m http.server 8080
 ```
 
-Abra `http://localhost:8080/`.
+Abra `http://localhost:8080/` — ou use `python3 jogar.py` (abre o navegador
+sozinho na porta 8137).
 
 ## Controles
 
-| Ação              | Teclado                    | Toque               |
-|-------------------|----------------------------|---------------------|
-| Mover             | WASD / setas               | joystick virtual    |
-| Falar / agir      | E                          | botão ✋            |
-| Atacar            | F / J                      | botão ⚔ / tocar     |
-| Pular / nadar     | Espaço                     | botão ▲             |
-| Lista de missões  | Q (com mapa do vale)       | —                   |
-| Som               | M                          | —                   |
-| Pausa / menu      | Esc (menu com opções)      | botão ⏸             |
-| Menu principal    | C = como jogar, O = opções | toque = jogar       |
+| Ação             | Teclado               | Toque               |
+|------------------|-----------------------|---------------------|
+| Mover            | WASD / setas          | joystick virtual    |
+| Falar / agir     | E                     | botão E             |
+| Atacar           | F / J / clique        | botão ⚔             |
+| Pular / nadar    | Espaço (2× com as Botas Aladas) | botão ▲   |
+| Diário           | Q (história, missões, artefatos e mapa) | botão ✦ |
+| Som liga/desliga | M                     | opções              |
+| Pausa / menu     | Esc                   | botão ⏸             |
 
-Opções: volume da música, volume dos efeitos e distância de visão
-(BAIXA/MÉDIA/ALTA). A configuração fica salva no navegador.
-
-## Música da intro
-
-- O jogo tem um **tema sintetizado original** que toca na abertura.
-- Para tocar sua própria música na intro/cutscene, coloque o arquivo em
-  `assets/music/` com um destes nomes: `inner-light.mp3`, `intro.mp3`,
-  `grand-pixel-game.mp3`, `music.mp3` ou `ost.mp3` (também aceita `.ogg`,
-  `.m4a` e `.wav`). O jogo detecta e toca na abertura.
-
-> **Importante:** use somente arquivos que você tem o direito de usar e
-> distribuir. Faixas comerciais (inclusive remixes não licenciados) continuam
-> protegidas por direitos autorais — não é possível embutir esse tipo de
-> material legalmente neste repositório; o mecanismo acima deixa você usar um
-> arquivo seu localmente sem que ele seja distribuído pelo projeto.
-
-## Como rodar
-
-Sem servidor, o navegador bloqueia os módulos ES — use um destes jeitos:
-
-**Windows (recomendado):** baixe o executável na página
-[*Releases*](https://github.com/Arthurowgg/htmlgame/releases) deste repositório
-(`GrandPixelGame-1.0.0-win64.exe`) — é autossuficiente: sobe o servidor local,
-abre o navegador e fecha tudo numa janela só. Há também um ZIP portátil com o
-mesmo jogo (Node + `gpg.cjs` + `Iniciar-GrandPixelGame.bat`).
-
-**Python (qualquer sistema):** `python3 jogar.py` — serve o jogo e abre o
-navegador (porta 8137; `--port 9000` muda; `--noopen` só imprime a URL).
-
-**Node.js (qualquer sistema):**
-`node desktop/build.js && node desktop/gpg-bundle.cjs`
-(ou, para desenvolver, qualquer servidor estático: `python3 -m http.server 8137`)
-
-Linux/macOS sem Node nem Python: habilite `--enable-local-file-accesses` no
-Chrome abrindo `index.html` direto (não recomendado).
+Opções: volume dos efeitos, som liga/desliga e distância de visão
+(BAIXA/MÉDIA/ALTA). Tudo fica salvo no navegador.
 
 ## Progresso
 
-- Salvamento automático em `localStorage` (chave `grandpixel-save`).
-- Para zerar tudo: menu de pausa → "Zerar progresso" (ou Ctrl+R na pausa).
-- A cada 5 missões secundárias concluídas você ganha **+1 coração máximo**.
-
-## O mundo
-
-8 regiões ligadas por estradas (há placas na vila indicando cada saída):
-
-- **Vila Solaria** (centro) — poço, obelisco, moinho, pousada e 3 NPCs.
-- **Campo Radiante** (leste) — cristais da memória e slimes verdes.
-- **Clareira das Lágrimas** (sudoeste) — flores de luz.
-- **Templo Antigo** (noroeste) — slimes + baú da relíquia (missão da história).
-- **Floresta dos Sussurros** (norte) — bagas, essências e wisps.
-- **Penhascos da Mina** (oeste) — minérios e slimes de pedra.
-- **Praia das Conchas** (sul) — conchas, píer e lagoa.
-- **Santuário do Cume** (leste, montanha) — visão panorâmica.
+- Saves em `localStorage` (chave `solaria-save`, v4). Saves antigos do
+  *Grand Pixel Game* (chave `grandpixel-save`, v3) são migrados
+  automaticamente na primeira execução.
+- Artefatos: Coroa de Solaria, Botas Aladas, Anel Vital, Amuleto de Fúria,
+  Capa do Vento, Lâmina do Alvorecer, Olho do Cartógrafo, Semente Estelar,
+  Coração da Ilha e Lente da Verdade — cada um muda como você joga.
 
 ## Estrutura
 
-- `index.html` / `css/style.css` — página 16:9 responsiva + controles touch
-- `js/math.js` — aleatório, ruído e matemática
-- `js/font.js` — fonte bitmap 8×8 (pt-BR) desenhada em código
-- `js/audio.js` — tema sintetizado + SFX 8-bit + música externa opcional
-- `js/world.js` — mundo voxel 192×192 determinístico, biomas e regiões
-- `js/renderer.js` — WebGL: terreno, água animada, sprites, brilhos, céu
-- `js/quests.js` — NPCs, diálogos e as 34 missões (pt-BR)
-- `js/main.js` — jogo: menus, cutscene, física, HUD, missões e save
+```
+index.html        interface e telas (DOM/CSS por cima do mundo 3D)
+css/style.css     visual da UI
+js/main.js        jogo: mundo aberto, missões, chefes, HUD, saves
+js/world.js       gerador do mundo (terreno, biomas, POIs, sprites)
+js/quests.js      dados das 70 missões e dos artefatos + desbloqueios
+js/renderer.js    renderizador WebGL (terreno voxel, sprites, brilhos)
+js/audio.js       efeitos sonoros sintetizados (WebAudio, sem arquivos)
+js/math.js        matemática 3D e ruído
+js/font.js        fonte bitmap auxiliar
+desktop/          empacotamento desktop (opcional)
+jogar.py          servidor local de um clique
+```
+
+O mundo é gerado deterministicamente por seed (20260908) — mesmo mapa para
+todo mundo, sempre.

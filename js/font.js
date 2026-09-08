@@ -1,4 +1,4 @@
-// GRAND PIXEL GAME — fonte pixelada própria (glifos 8x8 desenhados em bits) estilo 8-bit
+// SOLARIA — fonte bitmap auxiliar (glifos 8x8 em bits)
 // Glifos: linha de 8 bits onde o bit 7 (0x80) é o pixel mais à esquerda.
 
 const G = {}; // char -> array de 8 linhas

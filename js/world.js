@@ -1,4 +1,4 @@
-// GRAND PIXEL GAME — mundo voxel procedural (determinístico por seed)
+// SOLARIA — mundo voxel procedural (determinístico por seed)
 // GRADE: 192x192 células; cada célula mede 2x2 unidades de mundo e 1 de altura.
 // índice da célula = (0..191); célula c ocupa o mundo [2c-192, 2c-190).
 // Funções de terreno usam célula; funções de layout convertem mundo↔célula.
@@ -48,9 +48,46 @@ export const REGIONS = [
   { id: 'mina',       name: 'PENHASCOS DA MINA', x: -68, z: 4, r: 18 },
   { id: 'praia',      name: 'PRAIA DAS CONCHAS', x: 18, z: 66, r: 19 },
   { id: 'santuario',  name: 'SANTUARIO DO CUME', x: 74, z: -18, r: 14 },
+  { id: 'recife',     name: 'ILHA DO RECIFE',    x: 170, z: -160, r: 14 },
+  { id: 'cripta',     name: 'CRIPTA ESQUECIDA',  x: -150, z: 150, r: 26 },
 ];
 const MAP = (() => { const m = {}; for (const r of REGIONS) m[r.id] = r; return m; })();
 export const REGION = id => MAP[id] || { x: 0, z: 0, r: 1 };
+
+// ---------- pontos de interesse (POIs) do vale ----------
+// Referenciados pelas missões (visite/descubra). oculto = só aparece no mapa
+// depois de visitado ou com a Lente da Verdade.
+export const POIS = [
+  { id: 'praca',      nome: 'Praça de Solaria',       icone: 'F', x: 2.4, z: -7.4, regiao: 'vila' },
+  { id: 'poco',       nome: 'Poço dos Desejos',       icone: 'P', x: -1, z: -1, regiao: 'vila' },
+  { id: 'moinho',     nome: 'Moinho de Vento',        icone: 'M', x: 17, z: -11, regiao: 'vila' },
+  { id: 'selo_vila',  nome: 'Selo de Solaria',        icone: 'S', x: 7, z: -5, regiao: 'vila', selo: true },
+  { id: 'campo',      nome: 'Campo Radiante',         icone: 'C', x: 36, z: 9, regiao: 'campo' },
+  { id: 'lagoa',      nome: 'Lagoa das Rãs',          icone: '~', x: 46, z: 40, regiao: 'campo' },
+  { id: 'selo_campo', nome: 'Selo do Campo',          icone: 'S', x: 36, z: 6, regiao: 'campo', selo: true },
+  { id: 'clareira',   nome: 'Clareira das Lágrimas',  icone: 'C', x: -32, z: 28, regiao: 'clareira' },
+  { id: 'selo_clareira', nome: 'Selo da Clareira',    icone: 'S', x: -33, z: 24, regiao: 'clareira', selo: true },
+  { id: 'templo',     nome: 'Templo Antigo',          icone: 'T', x: -23, z: -19, regiao: 'templo' },
+  { id: 'altar_templo', nome: 'Altar do Templo',      icone: 'A', x: -15, z: -17, regiao: 'templo' },
+  { id: 'clareira_verde', nome: 'Clareira Verde',     icone: 'V', x: 4, z: -52, regiao: 'floresta' },
+  { id: 'boca_mina',  nome: 'Boca da Mina',           icone: 'M', x: -64, z: 4, regiao: 'mina' },
+  { id: 'gate_cripta', nome: 'Arco da Cripta',        icone: 'G', x: -58, z: 11, regiao: 'mina' },
+  { id: 'pier',       nome: 'Píer das Conchas',       icone: 'P', x: 25, z: 68, regiao: 'praia' },
+  { id: 'naufragio',  nome: 'O Naufrágio',            icone: 'N', x: 44, z: 58, regiao: 'praia', oculto: true },
+  { id: 'cume',       nome: 'Santuário do Cume',      icone: 'C', x: 74, z: -16, regiao: 'santuario' },
+  { id: 'mirante',    nome: 'Mirante do Vento',       icone: 'M', x: 84, z: -12, regiao: 'santuario' },
+  { id: 'torrente',   nome: 'Torrente Sagrada',       icone: '~', x: 66, z: -10, regiao: 'santuario', oculto: true },
+  { id: 'recife',     nome: 'Ilha do Recife',         icone: 'R', x: 170, z: -160, regiao: 'recife' },
+  { id: 'farol_recife', nome: 'Faro do Recife',       icone: 'L', x: 172, z: -162, regiao: 'recife' },
+  { id: 'segredo_recife', nome: 'Tesouro dos Náufragos', icone: '?', x: 166, z: -154, regiao: 'recife', oculto: true },
+  { id: 'cripta',     nome: 'Cripta Esquecida',       icone: 'C', x: -150, z: 150, regiao: 'cripta' },
+];
+export const REGION_COLOR = {
+  vila: '#e8c766', campo: '#8fd48a', clareira: '#7dd6c9', templo: '#b9a8ff',
+  floresta: '#5aa76a', mina: '#a7b0bd', praia: '#ffd98a', santuario: '#9ad9ff',
+  recife: '#7fe3d4', cripta: '#c28aff',
+};
+export const REGION_ICON = { vila: 'V', campo: 'C', clareira: 'L', templo: 'T', floresta: 'F', mina: 'M', praia: 'P', santuario: 'S', recife: 'R', cripta: 'X' };
 
 // estradas: polilinhas (mundo) saindo da vila
 const ROADS = [
@@ -160,6 +197,42 @@ export class World {
     this.roadC([[95, 90], [95, 92], [94, 94]]);
     this.roadC([[108, 98], [105, 98], [103, 97]]);
     this.roadC([[100, 102], [98, 101]]);
+    // 7) terrenos especiais (ilha, cripta) — por cima de tudo, com tipos fixos
+    this.extraTerrain();
+  }
+  // ---- ilha do recife (nordeste) e cripta (sudoeste) ----
+  extraTerrain() {
+    const raise = (wx, wz, r, h, ct, cs, ring = 0) => {
+      const cx = this.tileAt(wx), cz = this.tileAt(wz);
+      const R = Math.ceil((r + ring) / 2) + 2;
+      for (let dz = -R; dz <= R; dz++)
+        for (let dx = -R; dx <= R; dx++) {
+          const x = cx + dx, z = cz + dz;
+          if (x < 0 || z < 0 || x >= CELLS || z >= CELLS) continue;
+          const i = this.idx(x, z);
+          const d = Math.hypot((x - cx) * 2, (z - cz) * 2);
+          if (d <= r) this.setCell(x, z, h, ct, cs);
+          else if (ring > 0 && d <= r + ring && this.H[i] <= 0) this.setCell(x, z, 1, P.SAND, P.SAND);
+        }
+    };
+    // Ilha do Recife: anel de areia + grama, colina com o farol
+    raise(170, -160, 9, 1, P.G1, P.G1, 5);
+    raise(170, -160, 4, 2, P.G3, P.G3, 0);
+    // base do farol (2x2 células de pedra até h6)
+    for (const [dx, dz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+      for (let h = 3; h <= 6; h++) this.placeBlock(181 + dx, 16 + dz, h, P.STONE, 1, P.STONE);
+    }
+    // Cripta Esquecida: meseta alta no sudoeste do oceano
+    raise(-150, 150, 24, 5, P.STONE, P.STONED, 0);
+    raise(-150, 150, 26, 5, P.STONE, P.STONED, 0); // engrossa a borda
+    // piso interno mais claro
+    const cxi = this.tileAt(-150), czi = this.tileAt(150);
+    for (let dz = -12; dz <= 12; dz++)
+      for (let dx = -12; dx <= 12; dx++) {
+        const x = cxi + dx, z = czi + dz;
+        const d = Math.hypot(dx * 2, dz * 2);
+        if (d <= 20) this.setCell(x, z, 5, P.STONED, P.STONE);
+      }
   }
   // ---- terreno ----
   protectCircle(wx, wz, r) {
@@ -455,8 +528,8 @@ export class World {
     mk({ k: 'shrine', x: -68, z: 4, seed: 2 });
     mk({ k: 'shrine', x: 4, z: -56, seed: 3 });
     mk({ k: 'shrine', x: 18, z: 66, seed: 4 });
-    // 6) baú do templo (história) no altar
-    mk({ k: 'chest', x: -15, z: -17, seed: 2, msg: 'reliquia' });
+    // 6) baú do templo (altar) — guarda o Amuleto de Fúria (a3)
+    mk({ k: 'chest', id: 'chest_a3', x: -15, z: -17, seed: 2, give: 'a3', locked: true });
     // 7) placas
     mk({ k: 'sign', x: 20, z: 6, seed: 0, msg: 'LESTE: campo radiante' });
     mk({ k: 'sign', x: -12, z: 10, seed: 1, msg: 'SUDOESTE: clareira das lagrimas' });
@@ -480,6 +553,60 @@ export class World {
     // 12) rochas decorativas perto do píer
     mk({ k: 'rock', x: 20, z: 56, seed: 90 });
     mk({ k: 'rock', x: 13, z: 62, seed: 91 });
+    // 13) selos acesos (interação da história) e portal da cripta
+    mk({ k: 'selo', id: 'selo_vila', x: 7, z: -5, seed: 700 });
+    mk({ k: 'shrine', x: -33, z: 27, seed: 701 });
+    mk({ k: 'selo', id: 'selo_clareira', x: -32.6, z: 25.6, seed: 702 });
+    mk({ k: 'selo', id: 'selo_campo', x: 36, z: 6, seed: 703 });
+    mk({ k: 'gate', id: 'gate_cripta', x: -58, z: 11, seed: 704 });
+    mk({ k: 'portal', id: 'portal_cripta_in', x: -150, z: 166, seed: 705 });
+    mk({ k: 'portal', id: 'portal_cripta_out', x: -150, z: 134, seed: 706 });
+    // 14) ilha do recife: palmeiras (árvores altas esguias), arbustos, conchas
+    const palms = [[163, -152], [176, -154], [169, -147], [177, -165], [162, -166], [165, -156], [175, -158], [168, -170]];
+    for (const [x, z] of palms) {
+      const wx = x, wz = z;
+      if (this.heightAt(wx, wz) > 0) mk({ k: 'tree', x: wx, z: wz, seed: 800 + (x * 3 + z), v: 0, tall: 1 });
+    }
+    mk({ k: 'lantern', x: 172, z: -158, seed: 810 });
+    mk({ k: 'crystal', x: 166, z: -154, s: 1.4, seed: 820, pickup: false, tint: [0.6, 1, 0.9] });
+    // 15) naufrágio (casca de barco na água rasa do sul)
+    mk({ k: 'ship', x: 44, z: 58, seed: 830 });
+    // 16) cripta: tocheiras e cristais escuros em volta da arena
+    const crip = [[-158, 142], [-142, 142], [-142, 158], [-158, 158], [-150, 166], [-150, 134]];
+    for (const [x, z] of crip) mk({ k: 'torch', x, z, seed: (x * 5 + z) & 15 });
+    for (const [x, z] of [[-144, 156], [-156, 156], [-144, 144], [-158, 150]]) {
+      mk({ k: 'crystal', x, z, s: 1.6, seed: 900 + (x + z), pickup: false, tint: [0.95, 0.6, 1] });
+    }
+    // 17) baús de artefatos (conteúdo definido no jogo)
+    mk({ k: 'chest', id: 'chest_golem', x: -70, z: 4, seed: 4, give: 'a1' });
+    mk({ k: 'chest', id: 'chest_recife', x: 163, z: -156, seed: 5, give: 'heart', hard: true });
+    mk({ k: 'chest', id: 'chest_arena', x: -150, z: 150, seed: 6, give: 'a8', hard: true });
+    mk({ k: 'chest', id: 'chest_cume', x: 76, z: -14, seed: 7, give: 'heart' });
+    mk({ k: 'chest', id: 'chest_floresta', x: 8, z: -48, seed: 8, give: 'heart' });
+    mk({ k: 'chest', id: 'chest_vila', x: 1, z: -9, seed: 9, give: 'cura' });
+    // 18) flores e detalhes extras da clareira (poi visual)
+    for (let i = 0; i < 10; i++) {
+      const a = rng() * Math.PI * 2, rr = rng() * 7;
+      mk({ k: 'flower', x: -32 + Math.cos(a) * rr, z: 28 + Math.sin(a) * rr, c: Math.floor(rng() * 5) % 5 });
+    }
+    // 19) mais coletáveis para as missões grandes
+    const more = (k, cx, cz, n, spread) => {
+      for (let i = 0; i < n; i++) {
+        let wx = 0, wz = 0, ok = false;
+        for (let tr = 0; tr < 18 && !ok; tr++) {
+          const a = rng() * Math.PI * 2, rr = Math.sqrt(rng()) * spread;
+          wx = cx + Math.cos(a) * rr; wz = cz + Math.sin(a) * rr;
+          if (this.heightAt(wx, wz) === 1) ok = true;
+        }
+        if (ok) mk({ k, x: wx, z: wz, seed: 5000 + i + (k.charCodeAt(0) * 97), pickup: true });
+      }
+    };
+    more('crystal', 36, 9, 6, 14);   // total 22
+    more('florete', -32, 28, 6, 13); // total 22
+    more('berry', 4, -52, 10, 18);   // total 28
+    more('shell', 18, 64, 6, 17);    // total 26 +4 lagoa
+    more('essence', 4, -48, 4, 20);  // total 14
+    more('ore', -68, 4, 4, 15);      // total 22
     return s;
   }
   solidCircles() {
@@ -494,6 +621,7 @@ export class World {
       else if (sp.k === 'sign') r.push({ x: sp.x, z: sp.z, r: 0.45 });
       else if (sp.k === 'shrine') r.push({ x: sp.x, z: sp.z, r: 0.6 });
       else if (sp.k === 'lantern' || sp.k === 'torch') r.push({ x: sp.x, z: sp.z, r: 0.35 });
+      else if (sp.k === 'selo' || sp.k === 'gate') r.push({ x: sp.x, z: sp.z, r: 0.5 });
     }
     return r;
   }

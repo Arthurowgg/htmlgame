@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-GRAND PIXEL GAME — launcher alternativo (sem precisar de .exe).
+SOLARIA — o chamado da luz (launcher sem precisar de .exe).
 Serve o jogo num servidor HTTP local e abre o navegador.
 
 Uso:
@@ -9,8 +9,6 @@ Uso:
     python3 jogar.py --port 9000     # porta específica
     python3 jogar.py --noopen        # só imprime a URL
 
-Coloque MP3/OGG/M4A/WAV em assets/music/ (ao lado deste script ou na
-pasta do jogo) para tocar música própria na intro.
 Requer Python 3.7+ (biblioteca padrão apenas — sem instalação).
 """
 

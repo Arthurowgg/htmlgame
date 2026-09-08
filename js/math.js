@@ -1,4 +1,4 @@
-// GRAND PIXEL GAME — matemática 3D (aleatório, ruído, utilidades)
+// SOLARIA — matemática 3D (aleatório, ruído, utilidades)
 export const clamp = (x, a, b) => x < a ? a : (x > b ? b : x);
 export const clamp01 = x => clamp(x, 0, 1);
 export const lerp = (a, b, t) => a + (b - a) * t;
