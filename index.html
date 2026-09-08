@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>GRAND PIXEL GAME</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'><rect width='8' height='8' fill='%23110d1f'/><rect x='3' y='0' width='2' height='3' fill='%23ffd76a'/><rect x='0' y='3' width='8' height='2' fill='%23ffd76a'/><rect x='3' y='5' width='2' height='3' fill='%23ffd76a'/></svg>">
+</head>
+<body>
+<div id="frame">
+  <div id="sky"></div>
+  <canvas id="gl"></canvas>
+  <canvas id="ui"></canvas>
+  <div id="rotate-warn"><div>GIRE O CELULAR<br>PARA JOGAR NO MODO PAISAGEM</div></div>
+  <div id="touch" class="hidden">
+    <div id="stick"><div id="stick-knob"></div></div>
+    <div id="btns">
+      <button class="tbtn" id="btn-act">✋</button>
+      <button class="tbtn wide" id="btn-jump">▲</button>
+      <button class="tbtn wide" id="btn-atk">⚔</button>
+    </div>
+  </div>
+  <button id="pause-btn" class="hidden" title="Pausar">⏸</button>
+  <div id="loading"><div class="ld">GRAND PIXEL GAME<br>carregando mundo...</div></div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
