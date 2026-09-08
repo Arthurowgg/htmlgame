@@ -63,13 +63,13 @@ void main(){
   float y = vP.y;
   vec3 c = mix(cBot, cMid, smoothstep(0.16, 0.58, y));
   c = mix(c, cTop, smoothstep(0.6, 0.98, y));
-  // lua crepuscular com halo
+  // lua crepuscular com halo (halo forte perto do núcleo, decaindo para fora)
   vec2 lu = vec2(0.76, 0.88);
   float d = distance(vP, lu);
-  if (d < 0.055) c = mix(c, vec3(0.36, 0.42, 0.62), 0.45 * smoothstep(0.055, 0.02, d));
-  if (d < 0.022) c = mix(c, vec3(1.0, 0.98, 0.88), 0.95);
-  // brilho no horizonte
-  c += vec3(0.14, 0.09, 0.11) * smoothstep(0.22, 0.05, y) * 0.9;
+  c = mix(c, vec3(0.36, 0.42, 0.62), 0.45 * (1.0 - smoothstep(0.02, 0.09, d)));
+  c = mix(c, vec3(1.0, 0.98, 0.88), 0.95 * (1.0 - smoothstep(0.022, 0.06, d)));
+  // brilho no horizonte (mais forte na linha do chão, some subindo)
+  c += vec3(0.14, 0.09, 0.11) * (1.0 - smoothstep(0.05, 0.22, y)) * 0.9;
   gl_FragColor = vec4(c, 1.0);
 }`;
 
