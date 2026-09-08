@@ -1,0 +1,4 @@
+# build do launcher de desktop (gerado; o jogo embutido é reproduzível via desktop/build.js)
+desktop/gpg-bundle.cjs
+desktop/blobs.o
+*.exe

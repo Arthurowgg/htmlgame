@@ -47,6 +47,26 @@ Opções: volume da música, volume dos efeitos e distância de visão
 > material legalmente neste repositório; o mecanismo acima deixa você usar um
 > arquivo seu localmente sem que ele seja distribuído pelo projeto.
 
+## Como rodar
+
+Sem servidor, o navegador bloqueia os módulos ES — use um destes jeitos:
+
+**Windows (recomendado):** baixe o executável na página
+[*Releases*](https://github.com/Arthurowgg/htmlgame/releases) deste repositório
+(`GrandPixelGame-1.0.0-win64.exe`) — é autossuficiente: sobe o servidor local,
+abre o navegador e fecha tudo numa janela só. Há também um ZIP portátil com o
+mesmo jogo (Node + `gpg.cjs` + `Iniciar-GrandPixelGame.bat`).
+
+**Python (qualquer sistema):** `python3 jogar.py` — serve o jogo e abre o
+navegador (porta 8137; `--port 9000` muda; `--noopen` só imprime a URL).
+
+**Node.js (qualquer sistema):**
+`node desktop/build.js && node desktop/gpg-bundle.cjs`
+(ou, para desenvolver, qualquer servidor estático: `python3 -m http.server 8137`)
+
+Linux/macOS sem Node nem Python: habilite `--enable-local-file-accesses` no
+Chrome abrindo `index.html` direto (não recomendado).
+
 ## Progresso
 
 - Salvamento automático em `localStorage` (chave `grandpixel-save`).
