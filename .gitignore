@@ -1,4 +1,4 @@
 .smoke/
-desktop/win/gen/
+launcher/gen/
 *.pdb
 __pycache__/
