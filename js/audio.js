@@ -1,4 +1,4 @@
-// SOLARIA — efeitos sonoros 8-bit sintetizados (sem arquivos externos)
+// GRAND PIXEL GAME — efeitos sonoros 8-bit sintetizados (sem arquivos externos)
 // Tudo é gerado por osciladores WebAudio; nenhuma música ou faixa externa.
 import { mulberry32 } from './math.js';
 

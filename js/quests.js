@@ -1,4 +1,4 @@
-// SOLARIA — 70 missões (11 capítulos + 59 secundárias), 10 artefatos
+// GRAND PIXEL GAME — 70 missões (11 capítulos + 59 secundárias), 10 artefatos
 // e diálogos dinâmicos. Cada missão é um objeto com objetivo avaliável pelo
 // jogo (eventos: coletar/matar/visitar/falar/abrir/obter).
 import { POIS } from './world.js';

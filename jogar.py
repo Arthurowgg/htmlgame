@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-SOLARIA — o chamado da luz (launcher sem precisar de .exe).
+GRAND PIXEL GAME — launcher (sem precisar de .exe).
 Serve o jogo num servidor HTTP local e abre o navegador.
 
 Uso:

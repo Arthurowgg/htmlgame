@@ -1,4 +1,4 @@
-/* Solaria — o chamado da luz. UI moderna por cima do mundo 3D. */
+/* Grand Pixel Game — UI moderna por cima do mundo 3D. */
 :root {
   --bg: #0b0a14;
   --panel: rgba(17, 14, 34, 0.86);
@@ -84,11 +84,13 @@ button { font-family: inherit; }
   color: var(--gold2); font-size: 12px; letter-spacing: 3px; text-transform: uppercase; margin: 14px 0 8px;
 }
 .logo {
-  font-size: 46px; letter-spacing: 12px; font-weight: 800; color: var(--gold);
+  font-size: clamp(24px, 5.2vw, 40px); letter-spacing: 0.14em; font-weight: 800;
+  color: var(--gold); white-space: nowrap;
   text-shadow: 0 0 26px rgba(255, 215, 106, 0.45), 0 3px 0 rgba(0, 0, 0, 0.4);
-  margin-left: 12px;
+  margin-left: 0.14em;
 }
-.logo-sub { color: var(--cyan); letter-spacing: 6px; font-size: 13px; margin-top: 2px; text-transform: lowercase; }
+.logo-sub { color: var(--cyan); letter-spacing: 5px; font-size: 12px; margin-top: 6px; text-transform: lowercase; }
+.ver { color: rgba(236, 230, 255, 0.35); font-size: 11px; letter-spacing: 2px; margin-top: 14px; font-variant-numeric: tabular-nums; }
 .spacer { height: 26px; }
 .tiny { margin-top: 14px; color: var(--mut); font-size: 12px; letter-spacing: 1px; }
 

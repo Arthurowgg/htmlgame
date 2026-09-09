@@ -1,4 +1,4 @@
-// SOLARIA — renderizador WebGL: terreno voxel, sprites e brilhos
+// GRAND PIXEL GAME — renderizador WebGL: terreno voxel, sprites e brilhos
 // Toda a transformação de câmera é feita na GPU via matrizes (view/projeção);
 // a CPU só envia vértices do mundo e calcula animações leves (água, partículas).
 import { TS, WATER_Y, CHUNK } from './world.js';

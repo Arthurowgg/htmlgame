@@ -1,19 +1,19 @@
-# Solaria — o chamado da luz
+# Grand Pixel Game
 
 Jogo 3D voxel em mundo aberto, direto no navegador — WebGL puro + Canvas 2D,
-sem dependências, sem build, sem rede. O vale de Solaria tem **70 missões**
-(11 capítulos da história + 59 secundárias), **10 artefatos míticos** e
-chefes de verdade (Golem do Vale, Matriarca dos Sussurros e o Guardião
-Sombrio da Cripta Esquecida).
+sem dependências, sem build, sem rede. **70 missões** (11 capítulos da
+história + 59 secundárias), **10 artefatos míticos** e chefes de verdade
+(Golem do Vale, Matriarca dos Sussurros e o Guardião Sombrio da Cripta
+Esquecida).
 
 ## O mundo
 
 Oito regiões clássicas — vila de Solaria, Campo Radiante, Clareira das
 Lágrimas, Templo Antigo, Floresta dos Sussurros, Penhascos da Mina, Praia das
-Conchas e Santuário do Cume — mais duas novas: a **Ilha do Recife**
-(nordeste, do outro lado do mar) e a **Cripta Esquecida** (meseta no sudoeste,
-casa do chefe final). O dia e a noite passam com estrelas, sol e lua; a Cripta
-tem atmosfera própria.
+Conchas e Santuário do Cume — mais duas: a **Ilha do Recife** (nordeste, do
+outro lado do mar) e a **Cripta Esquecida** (meseta no sudoeste, casa do
+chefe final). O dia e a noite passam com estrelas, sol e lua; a Cripta tem
+atmosfera própria.
 
 ## Como rodar
 
@@ -43,12 +43,24 @@ Opções: volume dos efeitos, som liga/desliga e distância de visão
 
 ## Progresso
 
-- Saves em `localStorage` (chave `solaria-save`, v4). Saves antigos do
-  *Grand Pixel Game* (chave `grandpixel-save`, v3) são migrados
+- Saves em `localStorage` (chave `grandpixel-save`, v4). Saves antigos da
+  era "Solaria" (`solaria-save`) e do formato v3 são migrados
   automaticamente na primeira execução.
 - Artefatos: Coroa de Solaria, Botas Aladas, Anel Vital, Amuleto de Fúria,
   Capa do Vento, Lâmina do Alvorecer, Olho do Cartógrafo, Semente Estelar,
   Coração da Ilha e Lente da Verdade — cada um muda como você joga.
+
+## Versões e releases
+
+Versionamento semântico, controlado aqui mesmo: **cada pedido novo gera um
+release** no GitHub com tag (`vMAIOR.menor.patch`) e entrada no
+[CHANGELOG.md](CHANGELOG.md). Regra simples:
+
+- pedido novo / nova funcionalidade → bump de **menor** (ex.: v1.0.0 → v1.1.0);
+- correção de bug sem funcionalidade nova → bump de **patch**;
+- mudança que quebra saves ou a estrutura do jogo → bump de **maior**.
+
+A versão atual aparece no menu do jogo.
 
 ## Estrutura
 
@@ -64,6 +76,8 @@ js/math.js        matemática 3D e ruído
 js/font.js        fonte bitmap auxiliar
 desktop/          empacotamento desktop (opcional)
 jogar.py          servidor local de um clique
+CHANGELOG.md      histórico de versões
+.smoke/           testes headless (fora do controle de versão)
 ```
 
 O mundo é gerado deterministicamente por seed (20260908) — mesmo mapa para

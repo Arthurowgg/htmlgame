@@ -1,4 +1,4 @@
-// SOLARIA — mundo voxel procedural (determinístico por seed)
+// GRAND PIXEL GAME — mundo voxel procedural (determinístico por seed)
 // GRADE: 192x192 células; cada célula mede 2x2 unidades de mundo e 1 de altura.
 // índice da célula = (0..191); célula c ocupa o mundo [2c-192, 2c-190).
 // Funções de terreno usam célula; funções de layout convertem mundo↔célula.

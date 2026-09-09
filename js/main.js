@@ -1,4 +1,4 @@
-// SOLARIA — o chamado da luz
+// GRAND PIXEL GAME — o chamado da luz
 // jogo principal: mundo aberto, 70 missões (11 capítulos + 59 secundárias),
 // 10 artefatos míticos, chefes, lores e diário. Sem música externa.
 import { World, TS, WORLD_HALF, WATER_Y, REGIONS, POIS } from './world.js';
@@ -11,6 +11,7 @@ const MAIN = MAIN_SRC.map(m => Object.assign({}, m, {
   alvo: m.alvo ? m.alvo : m.item ? { item: m.item, n: m.n } : m.boss ? { boss: m.boss } : null,
 }));
 
+const VERSION = '1.0.0';
 const SEED = 20260908;
 const world = new World(SEED);
 const glCanvas = document.getElementById('gl');
@@ -22,10 +23,14 @@ const rdr = new Renderer(glCanvas, world);
 // ---------------- configuração ----------------
 const CFG = Object.assign({ sfx: 0.8, qual: 1 }, loadCfg());
 function loadCfg() {
-  try { return JSON.parse(localStorage.getItem('solaria-cfg') || 'null') || {}; } catch (e) { return {}; }
+  const read = k => {
+    try { const v = JSON.parse(localStorage.getItem(k) || 'null'); if (v && typeof v === 'object') return v; } catch (e) {}
+    return null;
+  };
+  return read('grandpixel-cfg') || read('solaria-cfg') || {};
 }
 function saveCfg() {
-  try { localStorage.setItem('solaria-cfg', JSON.stringify(CFG)); } catch (e) {}
+  try { localStorage.setItem('grandpixel-cfg', JSON.stringify(CFG)); } catch (e) {}
 }
 function applyCfg() {
   audio.setSfxVol(CFG.sfx);
@@ -1014,8 +1019,8 @@ function checkPoiVisits() {
 }
 
 // ---------------- save ----------------
-const SAVE_KEY = 'solaria-save';
-const SAVE_LEGACY = 'grandpixel-save';
+const SAVE_KEY = 'grandpixel-save';
+const SAVE_LEGACY_SOLARIA = 'solaria-save'; // era do título provisório
 function saveGame() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
@@ -1032,15 +1037,7 @@ function saveGame() {
     }));
   } catch (e) {}
 }
-function loadSave() {
-  try {
-    const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
-    if (d && d.v === 4) return d;
-  } catch (e) {}
-  // legado v3 (Grand Pixel Game): migração aproximada
-  try {
-    const old = JSON.parse(localStorage.getItem(SAVE_LEGACY) || 'null');
-    if (!old || old.v !== 3) return null;
+function migrateV3(old) {
     const migrate = {
       v: 4,
       x: old.x || 5.5, z: old.z || 5.5, hp: old.hpMax ? Math.min(old.hpMax, old.hp) : 3,
@@ -1066,7 +1063,20 @@ function loadSave() {
     let i = migrate.stateM.findIndex(v => v === 0);
     migrate.stateM[i < 0 ? 7 : i] = 1;
     return migrate;
-  } catch (e) { return null; }
+}
+function loadSave() {
+  // chave canônica: v4+ usa direto; v3 (era anterior ao overhaul) migra
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    if (d && d.v === 4) return d;
+    if (d && d.v === 3) return migrateV3(d);
+  } catch (e) {}
+  // era do título provisório (saves v4 sob a chave solaria-save)
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVE_LEGACY_SOLARIA) || 'null');
+    if (d && d.v === 4) return d;
+  } catch (e) {}
+  return null;
 }
 function applySave(d) {
   if (!d) return;
@@ -1093,7 +1103,7 @@ function applySave(d) {
 }
 function resetSave() {
   try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
-  try { localStorage.removeItem(SAVE_LEGACY); } catch (e) {}
+  try { localStorage.removeItem(SAVE_LEGACY_SOLARIA); } catch (e) {}
 }
 function newGame() {
   resetSave();
@@ -1839,7 +1849,7 @@ function toTitle() {
   $('t-continue').style.display = hasSave() ? '' : 'none';
 }
 function hasSave() {
-  try { return !!localStorage.getItem(SAVE_KEY) || !!localStorage.getItem(SAVE_LEGACY); } catch (e) { return false; }
+  try { return !!localStorage.getItem(SAVE_KEY) || !!localStorage.getItem(SAVE_LEGACY_SOLARIA); } catch (e) { return false; }
 }
 function continueGame() {
   const d = loadSave();
@@ -1988,6 +1998,8 @@ function boot() {
   setupInput();
   syncQualUI();
   document.getElementById('loading').style.display = 'none';
+  const ve = document.getElementById('ver');
+  if (ve) ve.textContent = 'v' + VERSION;
   showScreen('scr-title');
   const cont = $('t-continue');
   cont.style.display = hasSave() ? '' : 'none';
@@ -1999,6 +2011,7 @@ boot();
 // handle de depuração
 if (typeof window !== 'undefined') {
   window.__solaria = {
+    VERSION,
     get phase() { return phase; },
     player, side, stateM, colN, killN, arts, visited, collected, world, chestsOpen,
     questsTick, unlockSweep, saveGame, loadSave, resetSave, continueGame,
