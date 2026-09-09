@@ -50,6 +50,25 @@ Opções: volume dos efeitos, som liga/desliga e distância de visão
   Capa do Vento, Lâmina do Alvorecer, Olho do Cartógrafo, Semente Estelar,
   Coração da Ilha e Lente da Verdade — cada um muda como você joga.
 
+## Versão Windows (.exe)
+
+Cada release do Grand Pixel Game publica o **executável Windows**:
+
+- `GrandPixelGame-v1.1.0-win64.exe` — launcher + jogo completo num único
+  arquivo (~450 KB, sem instalação, sem Node): abre numa janela bonita com
+  a versão selecionada, lista as versões publicadas no GitHub, baixa a que
+  você escolher (ou atualiza sozinho para a mais recente) e abre o jogo no
+  navegador com servidor local embutido.
+- O download direto do .exe de cada versão fica em
+  `dist/GrandPixelGame-vX.Y.Z-win64.exe` na árvore da tag, também publicado
+  como asset do release quando o ambiente de publicação tem acesso ao GitHub
+  (uploads.github.com). Em qualquer caso o link da tag funciona:
+  `https://github.com/Arthurowgg/htmlgame/raw/refs/tags/vX.Y.Z/dist/GrandPixelGame-vX.Y.Z-win64.exe`.
+
+Para gerar o .exe localmente: `python3 desktop/win/build_win.py`
+(requer o pacote Python `ziglang` — `pip install --user --break-system-packages ziglang`).
+Para publicar os assets num release: `python3 desktop/win/publish.py vX.Y.Z`.
+
 ## Versões e releases
 
 Versionamento semântico, controlado aqui mesmo: **cada pedido novo gera um
@@ -74,7 +93,8 @@ js/renderer.js    renderizador WebGL (terreno voxel, sprites, brilhos)
 js/audio.js       efeitos sonoros sintetizados (WebAudio, sem arquivos)
 js/math.js        matemática 3D e ruído
 js/font.js        fonte bitmap auxiliar
-desktop/          empacotamento desktop (opcional)
+desktop/win/      launcher Windows + build (C/Zig, sem dependências)
+dist/             executáveis e zips publicados em cada release
 jogar.py          servidor local de um clique
 CHANGELOG.md      histórico de versões
 .smoke/           testes headless (fora do controle de versão)
