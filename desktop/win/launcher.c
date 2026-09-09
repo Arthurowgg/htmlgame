@@ -81,6 +81,22 @@ static void ensure_appdir(void) {
   CreateDirectoryW(g_appdirW, NULL);
   WideCharToMultiByte(CP_UTF8, 0, g_appdirW, -1, g_appdirA, (int)sizeof(g_appdirA), NULL, NULL);
 }
+/* log de diagnóstico: %LOCALAPPDATA%\GrandPixelGame\launcher.log */
+static void log_line(const char *fmt, ...) {
+  char buf[1024];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  char path[MAX_PATH * 2];
+  _snprintf(path, sizeof(path), "%s\\launcher.log", g_appdirA[0] ? g_appdirA : ".");
+  FILE *f = fopen(path, "ab");
+  if (!f) return;
+  SYSTEMTIME st;
+  GetLocalTime(&st);
+  fprintf(f, "[%02u:%02u:%02u] %s\r\n", st.wHour, st.wMinute, st.wSecond, buf);
+  fclose(f);
+}
 static void ensure_verdir(void) {
   wchar_t d[MAX_PATH * 2];
   ensure_appdir();
@@ -1917,6 +1933,13 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmd, int nShow) {
   ensure_appdir();
 
   int playMode = (wcsstr(lpCmd, L"--play") != NULL);
+  {
+    char exePath[MAX_PATH * 2];
+    DWORD el = GetModuleFileNameA(NULL, exePath, sizeof(exePath));
+    exePath[el < sizeof(exePath) ? el : sizeof(exePath) - 1] = 0;
+    log_line("=== Grand Pixel Game v%s | modo %s | exe: %s ===",
+             GPG_VERSION, playMode ? "jogador" : "launcher", exePath);
+  }
 
   /* nomes de classe estáticos: RegisterClass guarda o ponteiro */
   static wchar_t clsLauncher[] = L"GPGLauncherWnd_v13";
@@ -1972,44 +1995,69 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmd, int nShow) {
     wc.lpszClassName = clsPlayer;
     RegisterClassW(&wc);
     RECT wa;
-    SystemParametersInfoW(SPI_GETWORKAREA, 0, &wa, 0);
+    if (!SystemParametersInfoW(SPI_GETWORKAREA, 0, &wa, 0) ||
+        (wa.right - wa.left) < 200 || (wa.bottom - wa.top) < 200) {
+      wa.left = 0; wa.top = 0;
+      wa.right = GetSystemMetrics(SM_CXSCREEN);
+      wa.bottom = GetSystemMetrics(SM_CYSCREEN);
+    }
     int cx = wa.left + (wa.right - wa.left - PW) / 2;
     int cy = wa.top + (wa.bottom - wa.top - PH) / 2;
     HWND hw = CreateWindowExW(WS_EX_APPWINDOW, clsPlayer, L"Grand Pixel Game",
                               WS_POPUP | WS_VISIBLE, cx, cy, PW, PH, NULL, NULL,
                               hInst, NULL);
     if (!hw) {
-      wchar_t m[400];
-      _snwprintf(m, 400,
+      DWORD le = GetLastError();
+      log_line("falha ao criar janela do jogador, erro %lu", le);
+      wchar_t m[600];
+      _snwprintf(m, 600,
                  L"Não consegui abrir a janela do jogo (erro %lu).\n\n"
-                 L"Anote esse número e me avise — isso ajuda a corrigir.",
-                 GetLastError());
+                 L"Detalhes em %%LOCALAPPDATA%%\\GrandPixelGame\\launcher.log — "
+                 L"me mande esse arquivo que eu corrijo.",
+                 le);
       MessageBoxW(NULL, m, L"Grand Pixel Game", MB_OK | MB_ICONERROR);
       return 1;
     }
+    log_line("janela do jogador criada (hw=%p)", (void *)hw);
+    ShowWindow(hw, SW_SHOW);
+    SetForegroundWindow(hw);
   } else {
     RECT wa;
-    SystemParametersInfoW(SPI_GETWORKAREA, 0, &wa, 0);
+    if (!SystemParametersInfoW(SPI_GETWORKAREA, 0, &wa, 0) ||
+        (wa.right - wa.left) < 200 || (wa.bottom - wa.top) < 200) {
+      wa.left = 0; wa.top = 0;
+      wa.right = GetSystemMetrics(SM_CXSCREEN);
+      wa.bottom = GetSystemMetrics(SM_CYSCREEN);
+    }
     int cx = wa.left + (wa.right - wa.left - W) / 2;
     int cy = wa.top + (wa.bottom - wa.top - H) / 2;
     HWND hw = CreateWindowExW(0, clsLauncher, L"Grand Pixel Game — Launcher",
                               WS_POPUP | WS_VISIBLE, cx, cy, W, H, NULL, NULL,
                               hInst, NULL);
     if (!hw) {
-      wchar_t m[400];
-      _snwprintf(m, 400,
+      DWORD le = GetLastError();
+      log_line("falha ao criar janela do launcher, erro %lu", le);
+      wchar_t m[600];
+      _snwprintf(m, 600,
                  L"Não consegui abrir o launcher (erro %lu).\n\n"
-                 L"Anote esse número e me avise — isso ajuda a corrigir.",
-                 GetLastError());
+                 L"Detalhes em %%LOCALAPPDATA%%\\GrandPixelGame\\launcher.log — "
+                 L"me mande esse arquivo que eu corrijo.",
+                 le);
       MessageBoxW(NULL, m, L"Grand Pixel Game", MB_OK | MB_ICONERROR);
       return 1;
     }
+    log_line("janela do launcher criada (hw=%p)", (void *)hw);
+    ShowWindow(hw, SW_SHOW);
+    SetForegroundWindow(hw);
+    FlashWindow(hw, TRUE);
   }
 
   MSG msg;
+  log_line("entrando no loop de mensagens");
   while (GetMessageW(&msg, NULL, 0, 0) > 0) {
     TranslateMessage(&msg);
     DispatchMessageW(&msg);
   }
+  log_line("saindo (fim normal)");
   return 0;
 }

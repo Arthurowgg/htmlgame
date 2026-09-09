@@ -5,6 +5,19 @@ Todo release publica o executável Windows (GrandPixelGame-vX.Y.Z-win64.exe)
 na árvore da tag (pasta `dist/`) e, quando a rede permitir, como asset do
 release no GitHub.
 
+## [1.3.1] — 2026-09-09
+
+Diagnóstico de "exe não abre".
+
+### Adicionado
+- Log de diagnóstico gravado desde o primeiro passo do processo em
+  `%LOCALAPPDATA%\GrandPixelGame\launcher.log` (modo, caminho do .exe,
+  criação de janelas, erros com código) — essencial para caçar falha
+  silenciosa.
+- Janela do launcher/jogador trazida para o primeiro plano com flash ao
+  abrir; posição com fallback quando a área de trabalho é inválida.
+- Mensagens de erro citam o arquivo de log.
+
 ## [1.3.0] — 2026-09-09
 
 Launcher como aplicativo de verdade + conteúdo por versão.
