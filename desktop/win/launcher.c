@@ -727,82 +727,74 @@ static void open_browser(void) {
 }
 /* ============================================================
  * UI — launcher (janela principal) e player (janela do jogo)
+ * Versão bonita: double-buffer, gradientes, estrelas, ícones
+ * vetoriais, spinner, badges e estados de hover.
  * ============================================================ */
-#define C_BG1    RGB(13, 11, 24)
-#define C_BG2    RGB(23, 18, 41)
-#define C_PANEL1 RGB(29, 24, 55)
-#define C_PANEL2 RGB(21, 17, 40)
-#define C_LINE   RGB(58, 48, 96)
-#define C_LINE_G RGB(120, 96, 44)
-#define C_GOLD   RGB(255, 215, 106)
-#define C_GOLD_D RGB(224, 164, 64)
-#define C_GOLD_DK RGB(90, 66, 26)
-#define C_TXT    RGB(238, 232, 255)
-#define C_MUT    RGB(150, 141, 190)
-#define C_DIM    RGB(105, 98, 138)
-#define C_GREEN  RGB(140, 224, 150)
-#define C_CYAN   RGB(125, 228, 255)
-#define C_RED    RGB(255, 122, 138)
-#define C_HOVER  RGB(255, 255, 255)
+#define C_BG1      RGB(11, 9, 22)
+#define C_BG2      RGB(27, 20, 50)
+#define C_CARD1    RGB(30, 25, 54)
+#define C_CARD2    RGB(20, 17, 38)
+#define C_CARD_SEL RGB(52, 43, 86)
+#define C_LINE     RGB(62, 51, 105)
+#define C_LINE_SOFT RGB(42, 35, 74)
+#define C_GOLD     RGB(255, 215, 106)
+#define C_GOLD_L   RGB(255, 233, 168)
+#define C_GOLD_D   RGB(226, 165, 62)
+#define C_GOLD_DK  RGB(96, 70, 24)
+#define C_TXT      RGB(240, 235, 255)
+#define C_MUT      RGB(163, 154, 205)
+#define C_DIM      RGB(115, 106, 155)
+#define C_GREEN    RGB(142, 226, 158)
+#define C_CYAN     RGB(140, 228, 255)
+#define C_RED      RGB(255, 125, 140)
+#define C_BTN_TXT  RGB(48, 30, 4)
 
 static HINSTANCE g_hInst;
-static HFONT g_f[10];            /* estilos */
-enum { F_TINY = 0, F_SMALL, F_NORM, F_BOLD, F_BIG, F_HUGE, F_LOGO, F_MID, F_SMALLB, F_TITLEB };
-static int g_hoverBtn = -1;
-static int g_pressBtn = -1;
+static int W = 1024, H = 672;
+static int PW = 500, PH = 254;
+
+/* fontes */
+enum { FT_MICRO, FT_TINY, FT_SMALL, FT_SMALLB, FT_NORM, FT_BOLD, FT_MID, FT_BIG, FT_HUGE, FT_LOGO, FT_COUNT };
+static HFONT g_f[FT_COUNT];
+static void fonts_init(void) {
+  static const int px[FT_COUNT] = { 15, 17, 20, 20, 23, 23, 30, 44, 60, 33 };
+  static const int wt[FT_COUNT] = { FW_NORMAL, FW_NORMAL, FW_NORMAL, FW_SEMIBOLD, FW_NORMAL, FW_BOLD, FW_BOLD, FW_BOLD, FW_BLACK, FW_BOLD };
+  for (int i = 0; i < FT_COUNT; i++) {
+    g_f[i] = CreateFontW(-px[i], 0, 0, 0, wt[i], 0, 0, 0, DEFAULT_CHARSET,
+                         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                         DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+    if (!g_f[i]) g_f[i] = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+  }
+}
+
+/* estado */
+enum { B_NONE = -1, B_MIN, B_CLOSE, B_REFRESH, B_PLAY, B_OPEN, B_AUTOUPD, B_SITE };
+typedef struct { int id; RECT r; } Btn;
+static Btn g_btns[16];
+static int g_btnCount = 0;
+static int g_hoverBtn = B_NONE, g_pressBtn = B_NONE;
 static int g_hoverRow = -1;
 static int g_selIdx = -1;
 static int g_scroll = 0;
 static int g_autoUpd = 1;
-static int g_listH = 0;
-static wchar_t g_statusW[400];
-static int g_lastNewsy = 0;
+static int g_aniPhase = 0;
+static int g_lastW = 0, g_lastH = 0;
+static wchar_t g_statusW[420];
+static int g_aboutTip = 0;
 
-/* botões */
-enum { B_NONE = -1, B_PLAY, B_CLOSE, B_MIN, B_REFRESH, B_DL, B_OPEN, B_QUIT, B_ABOUT };
-typedef struct { int id; RECT r; } Btn;
-static Btn g_btns[12];
-static int g_btnCount = 0;
 static void btn_add(int id, int x, int y, int w, int h) {
-  if (g_btnCount >= 12) return;
+  if (g_btnCount >= 16) return;
   Btn *b = &g_btns[g_btnCount++];
   b->id = id;
-  b->r.left = x; b->r.top = y; b->r.right = x + w; b->r.bottom = y + h;
+  SetRect(&b->r, x, y, x + w, y + h);
 }
 static int btn_hit(int x, int y, int *id) {
   for (int i = 0; i < g_btnCount; i++)
-    if (x >= g_btns[i].r.left && x <= g_btns[i].r.right && y >= g_btns[i].r.top && y <= g_btns[i].r.bottom) {
-      *id = g_btns[i].id;
-      return 1;
-    }
+    if (PtInRect(&g_btns[i].r, *(POINT *)&(POINT){ x, y })) { *id = g_btns[i].id; return 1; }
   return 0;
 }
-static RECT btn_rect(int id) {
-  for (int i = 0; i < g_btnCount; i++)
-    if (g_btns[i].id == id) return g_btns[i].r;
-  RECT z = { 0, 0, 0, 0 };
-  return z;
-}
-static void mkfont(HFONT *f, int px, int weight) {
-  *f = CreateFontW(-px, 0, 0, 0, weight, 0, 0, 0, DEFAULT_CHARSET,
-                   OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-                   DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
-  if (!*f) *f = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
-}
-static void fonts_init(void) {
-  mkfont(&g_f[F_TINY],   17, FW_NORMAL);     /* ~10pt visual  */
-  mkfont(&g_f[F_SMALL],  20, FW_NORMAL);
-  mkfont(&g_f[F_SMALLB], 20, FW_SEMIBOLD);
-  mkfont(&g_f[F_NORM],   23, FW_NORMAL);
-  mkfont(&g_f[F_BOLD],   23, FW_BOLD);
-  mkfont(&g_f[F_MID],    28, FW_BOLD);
-  mkfont(&g_f[F_BIG],    40, FW_BOLD);
-  mkfont(&g_f[F_HUGE],   58, FW_BLACK);
-  mkfont(&g_f[F_LOGO],   34, FW_BOLD);
-  mkfont(&g_f[F_TITLEB], 30, FW_BOLD);
-}
 
-/* ----------------------------- desenho base ----------------------------- */
+/* ------------------------------ primitivas ------------------------------ */
 static void fill_rect(HDC h, int x, int y, int w, int hh, COLORREF c) {
   RECT r = { x, y, x + w, y + hh };
   HBRUSH br = CreateSolidBrush(c);
@@ -810,8 +802,9 @@ static void fill_rect(HDC h, int x, int y, int w, int hh, COLORREF c) {
   DeleteObject(br);
 }
 static void grad_v(HDC h, int x, int y, int w, int hh, COLORREF a, COLORREF b) {
+  if (hh <= 0 || w <= 0) return;
   for (int i = 0; i < hh; i++) {
-    double t = hh <= 1 ? 0 : (double)i / (hh - 1);
+    double t = (double)i / (hh - 1);
     int rr = (int)(GetRValue(a) + (GetRValue(b) - GetRValue(a)) * t);
     int gg = (int)(GetGValue(a) + (GetGValue(b) - GetGValue(a)) * t);
     int bb = (int)(GetBValue(a) + (GetBValue(b) - GetBValue(a)) * t);
@@ -851,9 +844,9 @@ static void text_w(HDC h, const wchar_t *s, int x, int y, int w, int hh, COLORRE
   DrawTextW(h, s, -1, &r, fmt | DT_NOPREFIX);
   SetTextCharacterExtra(h, 0);
 }
-static void text_w_shadow(HDC h, const wchar_t *s, int x, int y, int w, int hh, COLORREF c, HFONT f,
-                          UINT fmt, int tracking, COLORREF sh) {
-  text_w(h, s, x + 1, y + 2, w, hh, sh, f, fmt, tracking);
+static void text_shadow(HDC h, const wchar_t *s, int x, int y, int w, int hh, COLORREF c, HFONT f,
+                        UINT fmt, int tracking, COLORREF sh, int dy) {
+  text_w(h, s, x + 1, y + dy, w, hh, sh, f, fmt, tracking);
   text_w(h, s, x, y, w, hh, c, f, fmt, tracking);
 }
 static int text_wid(HDC h, const wchar_t *s, HFONT f) {
@@ -861,15 +854,6 @@ static int text_wid(HDC h, const wchar_t *s, HFONT f) {
   SIZE sz;
   GetTextExtentPoint32W(h, s, (int)wcslen(s), &sz);
   return sz.cx;
-}
-static void pill(HDC h, const wchar_t *s, int cx, int cy, COLORREF fg, COLORREF bg, HFONT f,
-                 int *outw) {
-  int tw = text_wid(h, s, f);
-  int w = tw + 18, hh = 22;
-  int x = cx - w / 2, y = cy - hh / 2;
-  round_fill(h, x, y, w, hh, 11, bg);
-  text_w(h, s, x, y - 1, w, hh, fg, f, DT_CENTER | DT_VCENTER | DT_SINGLELINE, 0);
-  if (outw) *outw = w;
 }
 static void poly_pts(HDC h, int n, const POINT *p, COLORREF c) {
   HBRUSH br = CreateSolidBrush(c);
@@ -880,301 +864,92 @@ static void poly_pts(HDC h, int n, const POINT *p, COLORREF c) {
   SelectObject(h, ob);
   DeleteObject(br);
 }
-
-/* ------------------------- helpers de conteúdo ------------------------- */
-static const wchar_t *state_badge(Ver *v, int *kind) {
-  /* kind: 0 = instalada, 1 = esta versao, 2 = nova (mais recente) */
-  if (v->current) { *kind = 1; return L"ESTE EXE"; }
-  if (v->installed) { *kind = 0; return L"INSTALADA"; }
-  *kind = 2;
-  return L"";
+static void line(HDC h, int x1, int y1, int x2, int y2, COLORREF c, int wpx) {
+  HPEN pn = CreatePen(PS_SOLID, wpx, c);
+  HGDIOBJ ob = SelectObject(h, pn);
+  MoveToEx(h, x1, y1, NULL);
+  LineTo(h, x2, y2);
+  SelectObject(h, ob);
+  DeleteObject(pn);
 }
-static void star_icon(HDC h, int cx, int cy, int R, COLORREF c) {
+static void star_poly(HDC h, int cx, int cy, int R, COLORREF c) {
   POINT p[10];
   for (int i = 0; i < 10; i++) {
-    double a = 3.14159 / 2 + i * 3.14159 / 5;
+    double a = 3.14159265 / 2 + i * 3.14159265 / 5;
     double rr = (i % 2 == 0) ? R : R * 0.42;
     p[i].x = (int)(cx + cos(a) * rr);
     p[i].y = (int)(cy - sin(a) * rr);
   }
   poly_pts(h, 10, p, c);
 }
-
-/* --------------------------------- paint: launcher ------------------------ */
-static int W = 980, H = 620;
-static void layout_launcher(void) {
-  g_btnCount = 0;
-  int tb = 46;
-  btn_add(B_MIN,  W - 84, 0, 42, tb);
-  btn_add(B_CLOSE, W - 42, 0, 42, tb);
-  int px = 20, py = tb + 16;
-  btn_add(B_PLAY, px, py + 220, 292, 58);
-  btn_add(B_REFRESH, W - 130, tb + 8, 110, 28);
-  /* checkbox "atualizacao automatica" */
-  {
-    Btn *b = &g_btns[g_btnCount++];
-    b->id = B_ABOUT;
-    SetRect(&b->r, px + 14, py + 282, px + 292, py + 334);
-  }
-  g_listH = H - tb - 16 - 40 - 44; /* do topo da lista ao rodapé */
+static void play_tri(HDC h, int cx, int cy, int r, COLORREF c) {
+  POINT p[3];
+  p[0].x = cx - (int)(r * 0.45); p[0].y = cy - r;
+  p[1].x = cx - (int)(r * 0.45); p[1].y = cy + r;
+  p[2].x = cx + r;               p[2].y = cy;
+  poly_pts(h, 3, p, c);
 }
-static void paint_launcher(HDC hdc) {
-  /* fundo */
-  grad_v(hdc, 0, 0, W, H, C_BG1, C_BG2);
-  /* faixa sutil no topo */
-  fill_rect(hdc, 0, 0, W, 3, C_GOLD_D);
-
-  /* ---- topo ---- */
-  text_w_shadow(hdc, L"GRAND PIXEL GAME", 22, 6, 520, 34, C_GOLD, g_f[F_LOGO], DT_LEFT | DT_VCENTER | DT_SINGLELINE, 6, RGB(0, 0, 0));
-  {
-    wchar_t v[40];
-    _snwprintf(v, 40, L"v%hs  ·  launcher", GPG_VERSION);
-    text_w(hdc, v, 520, 10, 250, 26, C_MUT, g_f[F_SMALL], DT_LEFT | DT_VCENTER | DT_SINGLELINE, 0);
-  }
-  /* botoes janela */
-  for (int i = 0; i < g_btnCount; i++) {
-    Btn *b = &g_btns[i];
-    if (b->id != B_MIN && b->id != B_CLOSE) continue;
-    COLORREF c = (g_hoverBtn == b->id) ? C_LINE : RGB(28, 24, 50);
-    fill_rect(hdc, b->r.left, b->r.top, b->r.right - b->r.left, b->r.bottom - b->r.top, c);
-    int cx = (b->r.left + b->r.right) / 2, cy = (b->r.top + b->r.bottom) / 2;
-    HPEN pn = CreatePen(PS_SOLID, 1, C_MUT);
-    HGDIOBJ ob = SelectObject(hdc, pn);
-    if (b->id == B_MIN) {
-      MoveToEx(hdc, cx - 7, cy, NULL); LineTo(hdc, cx + 7, cy);
-    } else {
-      MoveToEx(hdc, cx - 6, cy - 6, NULL); LineTo(hdc, cx + 6, cy + 6);
-      MoveToEx(hdc, cx + 6, cy - 6, NULL); LineTo(hdc, cx - 6, cy + 6);
+static void draw_check(HDC h, int cx, int cy, int s, COLORREF c) {
+  line(h, cx - s, cy, cx - s / 3, cy + s / 2, c, 3);
+  line(h, cx - s / 3, cy + s / 2, cx + s, cy - s / 2, c, 3);
+}
+static void draw_arrow_down(HDC h, int cx, int cy, int s, COLORREF c) {
+  line(h, cx, cy - s, cx, cy + s - 2, c, 2);
+  line(h, cx - s + 2, cy + s / 2 - 2, cx, cy + s, c, 2);
+  line(h, cx + s - 2, cy + s / 2 - 2, cx, cy + s, c, 2);
+}
+static void draw_circle(HDC h, int cx, int cy, int r, COLORREF c, int wpx) {
+  HPEN pn = CreatePen(PS_SOLID, wpx, c);
+  HGDIOBJ ob = SelectObject(h, pn);
+  HGDIOBJ bb = SelectObject(h, GetStockObject(NULL_BRUSH));
+  Ellipse(h, cx - r, cy - r, cx + r, cy + r);
+  SelectObject(h, bb);
+  SelectObject(h, ob);
+  DeleteObject(pn);
+}
+static void draw_spinner(HDC h, int cx, int cy, int r, int phase) {
+  /* arco girando: 8 segmentos, mais brilhantes na frente */
+  for (int k = 0; k < 8; k++) {
+    double a0 = (phase + k * 45) * 3.14159265 / 180.0;
+    double a1 = a0 + 0.5;
+    int bright = (k + 6) % 8; /* pico atrás */
+    double t = bright / 7.0;
+    COLORREF c = RGB((int)(90 + 165 * t), (int)(70 + 145 * t), (int)(30 + 60 * t));
+    POINT pp[9];
+    for (int i = 0; i <= 8; i++) {
+      double a = a0 + (a1 - a0) * i / 8.0;
+      pp[i].x = (int)(cx + cos(a) * r);
+      pp[i].y = (int)(cy + sin(a) * r);
     }
-    SelectObject(hdc, ob);
+    HPEN pn = CreatePen(PS_SOLID, 3, c);
+    HGDIOBJ ob = SelectObject(h, pn);
+    HGDIOBJ bb = SelectObject(h, GetStockObject(NULL_BRUSH));
+    Polyline(h, pp, 9);
+    SelectObject(h, bb);
+    SelectObject(h, ob);
     DeleteObject(pn);
   }
-
-  /* ---- painel esquerdo ---- */
-  int px = 20, py = 62, pw = 292, ph = 330;
-  grad_round(hdc, px, py, pw, ph, 18, C_PANEL1, C_PANEL2);
-  round_stroke(hdc, px, py, pw, ph, 18, C_LINE, 1);
-  text_w(hdc, L"PRONTO PARA JOGAR", px + 22, py + 18, pw - 44, 20, C_GOLD_D, g_f[F_TINY],
-         DT_LEFT | DT_SINGLELINE, 3);
-
-  int sel = g_selIdx;
-  Ver *v = sel >= 0 && sel < g_verCount ? &g_vers[sel] : NULL;
-  if (v) {
-    wchar_t big[40];
-    _snwprintf(big, 40, L"%hs", v->tag);
-    text_w_shadow(hdc, big, px + 20, py + 40, pw - 40, 64, C_TXT, g_f[F_HUGE], DT_LEFT | DT_SINGLELINE, 2, RGB(0, 0, 0));
-    int kind = 2;
-    const wchar_t *bd = state_badge(v, &kind);
-    if (bd[0]) {
-      int tw = text_wid(hdc, bd, g_f[F_SMALLB]);
-      int bx = px + 22, by = py + 106;
-      COLORREF fg = kind == 1 ? C_CYAN : (kind == 0 ? C_GREEN : C_GOLD);
-      COLORREF bg = kind == 1 ? RGB(28, 66, 90) : (kind == 0 ? RGB(22, 60, 40) : RGB(80, 58, 20));
-      round_fill(hdc, bx, by, tw + 20, 24, 12, bg);
-      text_w(hdc, bd, bx, by - 1, tw + 20, 24, fg, g_f[F_SMALLB], DT_CENTER | DT_VCENTER | DT_SINGLELINE, 0);
-    }
-    if (v->date[0]) {
-      wchar_t d[40];
-      _snwprintf(d, 40, L"publicado em %hs", v->date);
-      text_w(hdc, d, px + 22, py + 136, pw - 44, 20, C_DIM, g_f[F_SMALL], DT_LEFT | DT_SINGLELINE, 0);
-    }
-    if (v->size > 0) {
-      wchar_t d[60];
-      _snwprintf(d, 60, L"%.1f MB", v->size / 1048576.0);
-      text_w(hdc, d, px + 22, py + 156, pw - 44, 20, C_DIM, g_f[F_SMALL], DT_LEFT | DT_SINGLELINE, 0);
-    }
-    /* separador */
-    fill_rect(hdc, px + 22, py + 186, pw - 44, 1, C_LINE);
-    text_w(hdc, L"jogo completo autossuficiente: 70 missoes, 10 artefatos e os\n3 chefes do vale — servido localmente no seu navegador.",
-           px + 22, py + 196, pw - 44, 120, C_MUT, g_f[F_SMALL], DT_LEFT | DT_WORDBREAK, 0);
+}
+static void draw_starfield(HDC h, int w, int hh) {
+  srand(20260908);
+  for (int i = 0; i < 130; i++) {
+    int x = rand() % w, y = rand() % (hh * 2 / 3);
+    int b = rand() % 100;
+    int s = (b > 88) ? 2 : 1;
+    int v = 70 + b;
+    fill_rect(h, x, y, s, s, RGB(v / 2, v / 2, v));
   }
-
-  /* botão principal */
-  {
-    Btn *b = &g_btns[0]; /* B_PLAY */
-    int canPlay = sel >= 0 && v && (v->current || v->installed);
-    int needDl = sel >= 0 && v && !v->current && !v->installed && v->url[0];
-    if (g_downloading && g_dlIndex == sel) {
-      canPlay = 0; needDl = 0;
-    }
-    const wchar_t *lab = canPlay ? L"JOGAR" : (needDl ? L"BAIXAR E INSTALAR" : L"JOGAR");
-    int on = g_hoverBtn == B_PLAY && !g_pressBtn;
-    if (canPlay) {
-      grad_round(hdc, b->r.left, b->r.top, b->r.right - b->r.left, b->r.bottom - b->r.top, 12,
-                 on ? RGB(255, 236, 176) : C_GOLD, on ? RGB(255, 216, 130) : C_GOLD_D);
-      round_stroke(hdc, b->r.left, b->r.top, b->r.right - b->r.left, b->r.bottom - b->r.top, 12,
-                   RGB(255, 240, 200), 1);
-      text_w(hdc, lab, b->r.left, b->r.top + (g_pressBtn ? 2 : 0), b->r.right - b->r.left,
-             b->r.bottom - b->r.top, RGB(44, 28, 4), g_f[F_MID], DT_CENTER | DT_VCENTER | DT_SINGLELINE, 4);
-    } else if (needDl) {
-      grad_round(hdc, b->r.left, b->r.top, b->r.right - b->r.left, b->r.bottom - b->r.top, 12,
-                 on ? RGB(52, 60, 108) : RGB(38, 42, 78), on ? RGB(48, 55, 100) : RGB(30, 33, 62));
-      round_stroke(hdc, b->r.left, b->r.top, b->r.right - b->r.left, b->r.bottom - b->r.top, 12,
-                   C_LINE_G, 1);
-      text_w(hdc, lab, b->r.left, b->r.top + (g_pressBtn ? 2 : 0), b->r.right - b->r.left,
-             b->r.bottom - b->r.top, C_GOLD, g_f[F_BOLD], DT_CENTER | DT_VCENTER | DT_SINGLELINE, 2);
-    } else {
-      grad_round(hdc, b->r.left, b->r.top, b->r.right - b->r.left, b->r.bottom - b->r.top, 12,
-                 RGB(48, 44, 70), RGB(38, 34, 58));
-      text_w(hdc, L"…", b->r.left, b->r.top, b->r.right - b->r.left, b->r.bottom - b->r.top,
-             C_DIM, g_f[F_MID], DT_CENTER | DT_VCENTER | DT_SINGLELINE, 0);
-    }
-  }
-
-  /* auto-atualização */
-  {
-    int ax = px + 22, ay = py + 330 - 34;
-    int chk = g_autoUpd;
-    int c = chk ? C_GOLD : C_LINE;
-    round_stroke(hdc, ax, ay - 10, 18, 18, 4, c, 1);
-    if (chk) {
-      HPEN pn = CreatePen(PS_SOLID, 2, C_GOLD);
-      HGDIOBJ ob = SelectObject(hdc, pn);
-      MoveToEx(hdc, ax + 3, ay - 2, NULL); LineTo(hdc, ax + 7, ay + 2);
-      LineTo(hdc, ax + 14, ay - 6);
-      SelectObject(hdc, ob);
-      DeleteObject(pn);
-    }
-    text_w(hdc, L"atualizacao automatica", ax + 26, ay - 13, 240, 20, chk ? C_TXT : C_MUT,
-           g_f[F_SMALL], DT_LEFT | DT_VCENTER | DT_SINGLELINE, 0);
-  }
-
-  /* ---- painel direito (lista) ---- */
-  int rx = 336, ry = 62, rw = W - rx - 20;
-  grad_round(hdc, rx, ry, rw, g_listH, 18, RGB(26, 22, 46), RGB(19, 16, 36));
-  round_stroke(hdc, rx, ry, rw, g_listH, 18, C_LINE, 1);
-  text_w(hdc, L"VERSOES NO GITHUB", rx + 22, ry + 14, 260, 22, C_MUT, g_f[F_TINY], DT_LEFT | DT_SINGLELINE, 3);
-  {
-    Btn *rb = &g_btns[0];
-    (void)rb;
-  }
-  {
-    /* botão refresh no header */
-    int hx = rx + rw - 130, hy = ry + 12;
-    int on = g_hoverBtn == B_REFRESH;
-    round_fill(hdc, hx, hy, 110, 26, 13, on ? RGB(52, 46, 84) : RGB(34, 30, 58));
-    /* seta circular ↻ desenhada com dois arcos? usamos texto simples */
-    text_w(hdc, L"verificar agora", hx, hy - 1, 110, 26, on ? C_TXT : C_MUT, g_f[F_SMALL],
-           DT_CENTER | DT_VCENTER | DT_SINGLELINE, 0);
-    if (g_hoverBtn == B_REFRESH && (g_pressBtn == B_REFRESH)) {
-      fill_rect(hdc, hx, hy + 24, 110, 2, C_GOLD_D);
-    } else if (on) {
-      fill_rect(hdc, hx, hy + 24, 110, 2, RGB(120, 100, 60));
-    }
-  }
-
-  /* linhas da lista */
-  int lx = rx + 12, lw = rw - 24;
-  int rowH = 56;
-  int vis = (g_listH - 58) / rowH;
-  if (vis < 1) vis = 1;
-  int maxScroll = g_verCount - vis;
-  if (maxScroll < 0) maxScroll = 0;
-  if (g_scroll > maxScroll) g_scroll = maxScroll;
-  if (g_scroll < 0) g_scroll = 0;
-  int y0 = ry + 50;
-  for (int i = 0; i < vis; i++) {
-    int idx = i + g_scroll;
-    if (idx >= g_verCount) break;
-    Ver *vv = &g_vers[idx];
-    int y = y0 + i * rowH;
-    int isSel = (idx == g_selIdx);
-    if (isSel) {
-      grad_round(hdc, lx, y, lw, rowH - 8, 12, RGB(46, 40, 74), RGB(38, 33, 64));
-      round_stroke(hdc, lx, y, lw, rowH - 8, 12, C_GOLD_D, 1);
-    } else if (g_hoverRow == idx) {
-      round_fill(hdc, lx, y, lw, rowH - 8, 12, RGB(37, 33, 60));
-    }
-    /* radio */
-    int cx = lx + 22, cy = y + (rowH - 8) / 2;
-    COLORREF rc = isSel ? C_GOLD : C_LINE;
-    round_stroke(hdc, cx - 9, cy - 9, 18, 18, 9, rc, isSel ? 2 : 1);
-    if (isSel) round_fill(hdc, cx - 4, cy - 4, 8, 8, 4, C_GOLD);
-    /* tag */
-    wchar_t tg[40];
-    _snwprintf(tg, 40, L"%hs", vv->tag);
-    text_w(hdc, tg, cx + 20, y, 150, rowH - 10, isSel ? C_TXT : RGB(210, 202, 236), g_f[F_MID],
-           DT_LEFT | DT_VCENTER | DT_SINGLELINE, 0);
-    /* badges */
-    int kind;
-    const wchar_t *bd = state_badge(vv, &kind);
-    int bw = 0;
-    if (bd[0]) {
-      int tw = text_wid(hdc, bd, g_f[F_SMALLB]);
-      bw = tw + 20;
-      COLORREF fg = kind == 1 ? C_CYAN : (kind == 0 ? C_GREEN : C_GOLD);
-      COLORREF bg = kind == 1 ? RGB(28, 66, 90) : (kind == 0 ? RGB(22, 60, 40) : RGB(80, 58, 20));
-      round_fill(hdc, lx + lw - 40 - tw - 10, cy - 12, tw + 20, 24, 12, bg);
-      text_w(hdc, bd, lx + lw - 40 - tw - 10, cy - 13, tw + 20, 24, fg, g_f[F_SMALLB],
-             DT_CENTER | DT_VCENTER | DT_SINGLELINE, 0);
-      (void)bw;
-    }
-    /* seta de baixar p/ não instaladas */
-    if (!vv->current && !vv->installed && vv->url[0]) {
-      int ax = lx + lw - 22;
-      HPEN pn = CreatePen(PS_SOLID, 2, C_GOLD_D);
-      HGDIOBJ ob = SelectObject(hdc, pn);
-      MoveToEx(hdc, ax - 6, cy - 3, NULL); LineTo(hdc, ax, cy + 4); LineTo(hdc, ax + 6, cy - 3);
-      MoveToEx(hdc, ax, cy - 6, NULL); LineTo(hdc, ax, cy + 6);
-      SelectObject(hdc, ob);
-      DeleteObject(pn);
-    }
-    /* separador */
-    if (i < vis - 1 && idx + 1 < g_verCount)
-      fill_rect(hdc, lx + 12, y + rowH - 6, lw - 24, 1, RGB(40, 35, 66));
-  }
-  if (g_verCount == 0) {
-    text_w(hdc, g_fetching ? L"consultando o GitHub…" :
-           (g_fetchFailed ? L"sem conexao — verifique sua internet" : L"nenhuma versao encontrada"),
-           lx, y0 + 20, lw, 30, C_MUT, g_f[F_NORM], DT_CENTER | DT_SINGLELINE, 0);
-  }
-  /* scrollbar */
-  if (maxScroll > 0) {
-    int sh = g_listH - 58;
-    int th = sh / (maxScroll + 1);
-    if (th < 24) th = 24;
-    int ty = y0 + g_scroll * (sh - th) / maxScroll;
-    round_fill(hdc, rx + rw - 9, y0 + ty, 4, th, 2, C_DIM);
-  }
-
-  /* ---- rodapé: status + barra de progresso ---- */
-  int fy = H - 40;
-  fill_rect(hdc, 0, fy - 4, W, 1, RGB(36, 30, 62));
-  if (g_downloading) {
-    wchar_t st[200];
-    double pct = g_dlTotal > 0 ? (double)g_dlGot / g_dlTotal : 0;
-    _snwprintf(st, 200, L"baixando %hs   %d%%", g_dlJob.tag, (int)(pct * 100));
-    text_w(hdc, st, 22, fy + 4, 400, 30, C_GOLD, g_f[F_SMALLB], DT_LEFT | DT_VCENTER | DT_SINGLELINE, 0);
-    int bx = 430, bw = W - 430 - 150;
-    round_fill(hdc, bx, fy + 14, bw, 12, 6, RGB(30, 26, 52));
-    int fw = (int)(bw * pct);
-    if (fw > 0) {
-      HRGN rg = CreateRoundRectRgn(bx, fy + 14, bx + fw, fy + 26, 12, 12);
-      SelectClipRgn(hdc, rg);
-      grad_v(hdc, bx, fy + 14, fw, 12, C_GOLD, C_GOLD_D);
-      SelectClipRgn(hdc, NULL);
-      DeleteObject(rg);
-    }
-    wchar_t mb[40];
-    if (g_dlTotal > 0) _snwprintf(mb, 40, L"%.1f / %.1f MB", g_dlGot / 1048576.0, g_dlTotal / 1048576.0);
-    else _snwprintf(mb, 40, L"%.1f MB", g_dlGot / 1048576.0);
-    text_w(hdc, mb, W - 140, fy + 4, 120, 30, C_MUT, g_f[F_SMALL], DT_RIGHT | DT_VCENTER | DT_SINGLELINE, 0);
-  } else {
-    text_w(hdc, g_statusW, 22, fy + 2, W - 44, 30, g_statusErr ? C_RED : C_MUT, g_f[F_SMALL],
-           DT_LEFT | DT_VCENTER | DT_SINGLELINE, 0);
-    /* estrela decorativa no canto */
-    star_icon(hdc, W - 40, fy + 17, 8, C_GOLD_D);
-  }
-  /* glow do rodapé? ok */
 }
 
-/* --------------------------------------- ações launcher ------------------ */
-static void launcher_set_status(const wchar_t *s, int err) {
-  wcsncpy(g_statusW, s, 399);
-  g_statusW[399] = 0;
+/* --------------------------- texto do status --------------------------- */
+static void status_set(const wchar_t *s, int err) {
+  wcsncpy(g_statusW, s, 419);
+  g_statusW[419] = 0;
   g_statusErr = err;
 }
-static void launcher_refresh_rows(void) {
+
+/* --------------------------- seleção / lista --------------------------- */
+static void refresh_rows(void) {
   for (int i = 0; i < g_verCount; i++) {
     char full[24];
     _snprintf(full, sizeof(full), "v%s", GPG_VERSION);
@@ -1183,25 +958,33 @@ static void launcher_refresh_rows(void) {
   }
   find_installed();
   if (g_selIdx < 0 || g_selIdx >= g_verCount) {
-    /* seleciona a mais nova instalada/atual; senão a primeira */
     g_selIdx = 0;
     for (int i = 0; i < g_verCount; i++)
       if (g_vers[i].current || g_vers[i].installed) { g_selIdx = i; break; }
   }
+  g_scroll = 0;
 }
-static void launcher_play(void) {
+static void select_row(int idx) {
+  if (idx < 0 || idx >= g_verCount) return;
+  g_selIdx = idx;
+  InvalidateRect(g_hwnd, NULL, FALSE);
+}
+
+/* ------------------------------ JOGAR / DL ------------------------------ */
+static void play_launcher(void) {
   if (g_selIdx < 0 || g_selIdx >= g_verCount) return;
   Ver *v = &g_vers[g_selIdx];
   wchar_t exe[MAX_PATH * 2];
   if (v->current) {
     GetModuleFileNameW(NULL, exe, MAX_PATH * 2);
   } else if (v->installed) {
-    char san[40];
-    version_san(san, sizeof(san), v->tag);
-    _snwprintf(exe, MAX_PATH * 2, L"%s\\versions\\GrandPixelGame-v%hs-win64.exe",
-               g_appdirW, san);
+    _snwprintf(exe, MAX_PATH * 2, L"%s\\versions\\GrandPixelGame-%hs-win64.exe",
+               g_appdirW, v->tag);
   } else return;
-  if (GetFileAttributesW(exe) == INVALID_FILE_ATTRIBUTES) return;
+  if (GetFileAttributesW(exe) == INVALID_FILE_ATTRIBUTES) {
+    status_set(L"não achei o jogo instalado — baixe de novo.", 1);
+    return;
+  }
   wchar_t cmd[MAX_PATH * 2 + 24];
   _snwprintf(cmd, MAX_PATH * 2 + 24, L"\"%s\" --play", exe);
   STARTUPINFOW si;
@@ -1212,82 +995,414 @@ static void launcher_play(void) {
   if (CreateProcessW(exe, cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
-    wchar_t st[200];
-    _snwprintf(st, 200, L"%hs aberto no navegador — a janelinha do jogador fica aberta em segundo plano.", v->tag);
-    launcher_set_status(st, 0);
+    wchar_t st[220];
+    _snwprintf(st, 220, L"%hs iniciado — abrindo o navegador. Boa jornada!", v->tag);
+    status_set(st, 0);
   } else {
-    launcher_set_status(L"nao consegui iniciar o jogo.", 1);
+    status_set(L"não consegui iniciar o jogo. Tente baixar a versão de novo.", 1);
   }
 }
-static void launcher_select(int idx) {
-  if (idx < 0 || idx >= g_verCount) return;
-  g_selIdx = idx;
-  g_scroll = 0;
-  InvalidateRect(g_hwnd, NULL, FALSE);
+
+/* ------------------------------ layout ------------------------------ */
+#define LV_X0  24          /* card esquerdo */
+#define LV_Y0  78
+#define LV_W   336
+#define RV_X0  384         /* card direito */
+#define RV_W   (W - 384 - 24)
+#define CARD_H (H - 78 - 78)   /* 78 topo + 78 rodapé */
+
+static void layout_ui(void) {
+  g_btnCount = 0;
+  /* topo: min + fechar (à direita), 56px de altura */
+  btn_add(B_MIN,   W - 92, 0, 46, 58);
+  btn_add(B_CLOSE, W - 46, 0, 46, 58);
+  /* card esquerdo */
+  btn_add(B_PLAY, LV_X0 + 20, LV_Y0 + CARD_H - 74, LV_W - 40, 56);
+  btn_add(B_AUTOUPD, LV_X0 + 16, LV_Y0 + CARD_H - 110, LV_W - 32, 30);
+  btn_add(B_SITE, LV_X0 + 20, LV_Y0 + 16, 0, 0); /* logo clicável → projeto */
+  g_btns[g_btnCount - 1].r.left = LV_X0 + 18; g_btns[g_btnCount - 1].r.top = LV_Y0 + 12;
+  g_btns[g_btnCount - 1].r.right = LV_X0 + 240; g_btns[g_btnCount - 1].r.bottom = LV_Y0 + 46;
+  /* card direito: botão verificar no cabeçalho */
+  btn_add(B_REFRESH, RV_X0 + RV_W - 122, LV_Y0 + 16, 100, 26);
 }
 
-/* --------------------------------------- paint: player -------------------- */
-static int PW = 460, PH = 210;
+/* ------------------------------ paint: launcher ------------------------------ */
+static COLORREF badge_colors(int kind, int *bg, int *fg) {
+  /* kind 0 instalada (verde), 1 este exe (ciano), 2 nova (dourado) */
+  if (kind == 1) { *fg = (int)C_CYAN;  *bg = (int)RGB(24, 58, 82); }
+  else if (kind == 0) { *fg = (int)C_GREEN; *bg = (int)RGB(20, 56, 38); }
+  else { *fg = (int)C_GOLD; *bg = (int)RGB(86, 62, 20); }
+  return 0;
+}
+static int ver_kind(Ver *v) {
+  if (v->current) return 1;
+  if (v->installed) return 0;
+  return 2;
+}
+static void paint_launcher(HDC hdc) {
+  /* ---------------- fundo ---------------- */
+  grad_v(hdc, 0, 0, W, H, C_BG1, C_BG2);
+  draw_starfield(hdc, W, H);
+  fill_rect(hdc, 0, 0, W, 3, C_GOLD_D);
+  /* brilho suave no topo */
+  for (int i = 0; i < 90; i++) {
+    int a = 26 - (int)(26.0 * i / 90.0);
+    if (a <= 0) break;
+    fill_rect(hdc, 0, 0, W, 1, RGB(60 + a, 48 + a, 96 + a * 2 > 255 ? 255 : 96 + a * 2));
+  }
+
+  /* ---------------- cabeçalho ---------------- */
+  star_poly(hdc, 40, 30, 12, C_GOLD);
+  text_shadow(hdc, L"GRAND PIXEL GAME", 62, 8, 560, 34, C_GOLD, g_f[FT_LOGO],
+              DT_LEFT | DT_VCENTER | DT_SINGLELINE, 7, RGB(0, 0, 0), 2);
+  {
+    wchar_t v[64];
+    _snwprintf(v, 64, L"LAUNCHER  v%hs", GPG_VERSION);
+    text_w(hdc, v, 470, 14, 300, 26, C_MUT, g_f[FT_TINY], DT_RIGHT | DT_VCENTER | DT_SINGLELINE, 3);
+  }
+  /* botões de janela */
+  for (int i = 0; i < g_btnCount; i++) {
+    Btn *b = &g_btns[i];
+    if (b->id != B_MIN && b->id != B_CLOSE) continue;
+    int hot = g_hoverBtn == b->id && g_pressBtn != b->id;
+    int x = b->r.left, y = b->r.top, w = b->r.right - b->r.left, hh = b->r.bottom - b->r.top;
+    if (b->id == B_CLOSE && hot) round_fill(hdc, x + 4, y + 12, w - 8, hh - 20, 14, RGB(150, 40, 50));
+    else if (hot) round_fill(hdc, x + 4, y + 12, w - 8, hh - 20, 14, RGB(70, 60, 105));
+    int cx = x + w / 2, cy = y + 12 + (hh - 20) / 2;
+    if (b->id == B_MIN) line(hdc, cx - 6, cy, cx + 6, cy, hot ? C_TXT : C_MUT, 2);
+    else { line(hdc, cx - 5, cy - 5, cx + 5, cy + 5, hot ? C_TXT : C_MUT, 2);
+           line(hdc, cx + 5, cy - 5, cx - 5, cy + 5, hot ? C_TXT : C_MUT, 2); }
+  }
+
+  /* ---------------- card esquerdo: seleção ---------------- */
+  int lx = LV_X0, ly = LV_Y0, lw = LV_W, lh = CARD_H;
+  grad_round(hdc, lx, ly, lw, lh, 20, C_CARD1, C_CARD2);
+  round_stroke(hdc, lx, ly, lw, lh, 20, C_LINE, 1);
+  round_stroke(hdc, lx + 1, ly + 1, lw - 2, lh - 2, 19, RGB(80, 66, 120), 1);
+
+  text_w(hdc, L"VERSÃO SELECIONADA", lx + 22, ly + 22, 220, 18, C_GOLD_D, g_f[FT_MICRO],
+         DT_LEFT | DT_SINGLELINE, 4);
+
+  Ver *v = (g_selIdx >= 0 && g_selIdx < g_verCount) ? &g_vers[g_selIdx] : NULL;
+  if (v) {
+    wchar_t big[40];
+    _snwprintf(big, 40, L"%hs", v->tag);
+    text_shadow(hdc, big, lx + 20, ly + 46, lw - 40, 58, C_TXT, g_f[FT_HUGE],
+                DT_LEFT | DT_SINGLELINE, 2, RGB(0, 0, 0), 2);
+
+    /* badge */
+    int kind = ver_kind(v);
+    const wchar_t *bd = kind == 1 ? L"ESTE EXE" : (kind == 0 ? L"INSTALADA" : L"NOVA");
+    int tw = text_wid(hdc, bd, g_f[FT_SMALLB]);
+    int bx = lx + 22, by = ly + 108;
+    int bgc, fgc;
+    badge_colors(kind, &bgc, &fgc);
+    round_fill(hdc, bx, by, tw + 22, 26, 13, (COLORREF)bgc);
+    round_stroke(hdc, bx, by, tw + 22, 26, 13, C_LINE, 1);
+    text_w(hdc, bd, bx, by - 1, tw + 22, 26, (COLORREF)fgc, g_f[FT_SMALLB],
+           DT_CENTER | DT_VCENTER | DT_SINGLELINE, 0);
+    if (kind == 2) draw_arrow_down(hdc, bx + tw + 34, by + 13, 7, C_GOLD);
+
+    /* datas e tamanho */
+    wchar_t d[80];
+    if (v->date[0]) {
+      _snwprintf(d, 80, L"publicada em %hs", v->date);
+      text_w(hdc, d, lx + 22, ly + 146, lw - 44, 20, C_MUT, g_f[FT_SMALL], DT_LEFT | DT_SINGLELINE, 0);
+    }
+    if (v->size > 0) {
+      _snwprintf(d, 80, L"%.1f MB  ·  jogo completo embutido", v->size / 1048576.0);
+      text_w(hdc, d, lx + 22, ly + 168, lw - 44, 20, C_DIM, g_f[FT_SMALL], DT_LEFT | DT_SINGLELINE, 0);
+    }
+    fill_rect(hdc, lx + 22, ly + 198, lw - 44, 1, C_LINE_SOFT);
+
+    RECT box = { lx + 22, ly + 212, lx + lw - 22, ly + 346 };
+    text_w(hdc, L"Um único executável: jogo completo, servidor local e\n"
+                L"atualização pelo GitHub. Baixa qualquer versão\n"
+                L"publicada e abre o jogo no navegador.",
+           box.left, box.top, box.right - box.left, box.bottom - box.top,
+           C_MUT, g_f[FT_SMALL], DT_LEFT | DT_WORDBREAK, 0);
+  }
+
+  /* checkbox auto-atualização */
+  {
+    int ax = lx + 22, ay = ly + lh - 128;
+    int chk = g_autoUpd;
+    draw_circle(hdc, ax + 9, ay + 7, 9, chk ? C_GOLD : C_LINE, 2);
+    if (chk) { fill_rect(hdc, ax + 5, ay + 3, 9, 9, C_GOLD);
+      /* check */
+      line(hdc, ax + 7, ay + 7, ax + 10, ay + 10, RGB(40, 26, 4), 2);
+      line(hdc, ax + 10, ay + 10, ax + 15, ay + 3, RGB(40, 26, 4), 2); }
+    int hot = g_hoverBtn == B_AUTOUPD && g_pressBtn != B_AUTOUPD;
+    text_w(hdc, L"atualização automática", ax + 26, ay - 7, 240, 24, chk ? C_TXT : C_MUT,
+           g_f[FT_SMALL], DT_LEFT | DT_VCENTER | DT_SINGLELINE, 0);
+    if (hot) text_w(hdc, L"quando houver versão nova, baixa e instala sozinho",
+                    lx + 22, ay + 20, lw - 44, 18, C_DIM, g_f[FT_MICRO],
+                    DT_LEFT | DT_SINGLELINE, 0);
+  }
+
+  /* botão principal JOGAR / BAIXAR */
+  {
+    Btn *b = NULL;
+    for (int i = 0; i < g_btnCount; i++) if (g_btns[i].id == B_PLAY) { b = &g_btns[i]; break; }
+    if (b) {
+      int bx = b->r.left, by = b->r.top, bw = b->r.right - b->r.left, bh = b->r.bottom - b->r.top;
+      int canPlay = v && (v->current || v->installed);
+      int needDl = v && !v->current && !v->installed && v->url[0];
+      int hot = g_hoverBtn == B_PLAY && g_pressBtn != B_PLAY;
+      if (canPlay) {
+        grad_round(hdc, bx, by, bw, bh, 16, hot ? RGB(255, 240, 190) : C_GOLD_L,
+                   hot ? C_GOLD : C_GOLD_D);
+        /* brilho superior */
+        HRGN rg = CreateRoundRectRgn(bx, by, bx + bw + 1, by + bh + 1, 16, 16);
+        SelectClipRgn(hdc, rg);
+        for (int i = 0; i < 14; i++) {
+          fill_rect(hdc, bx, by + i, bw, 1,
+                    RGB(255, 255, 255 - i * 6 > 190 ? 255 : 255 - (int)(i * 5)));
+        }
+        SelectClipRgn(hdc, NULL);
+        DeleteObject(rg);
+        round_stroke(hdc, bx, by, bw, bh, 16, RGB(255, 246, 214), 1);
+        play_tri(hdc, bx + 42, by + bh / 2, 11, C_BTN_TXT);
+        text_w(hdc, L"JOGAR", bx + 44, by + (g_pressBtn == B_PLAY ? 2 : 0), bw - 60, bh,
+               C_BTN_TXT, g_f[FT_MID], DT_CENTER | DT_VCENTER | DT_SINGLELINE, 5);
+      } else if (needDl) {
+        grad_round(hdc, bx, by, bw, bh, 16, hot ? RGB(56, 66, 122) : RGB(40, 46, 92),
+                   hot ? RGB(48, 56, 104) : RGB(28, 33, 66));
+        round_stroke(hdc, bx, by, bw, bh, 16, hot ? C_GOLD : C_GOLD_D, 1);
+        text_w(hdc, L"BAIXAR E INSTALAR", bx + 24, by + (g_pressBtn == B_PLAY ? 2 : 0),
+               bw - 48, bh, C_GOLD, g_f[FT_BOLD], DT_CENTER | DT_VCENTER | DT_SINGLELINE, 2);
+        draw_arrow_down(hdc, bx + 44, by + bh / 2, 8, C_GOLD);
+      } else {
+        grad_round(hdc, bx, by, bw, bh, 16, RGB(52, 47, 76), RGB(40, 36, 62));
+        text_w(hdc, L"…", bx, by, bw, bh, C_DIM, g_f[FT_MID], DT_CENTER | DT_VCENTER | DT_SINGLELINE, 0);
+      }
+    }
+  }
+
+  /* ---------------- card direito: lista ---------------- */
+  int rx = RV_X0, ry = LV_Y0, rw = RV_W, rh = CARD_H;
+  grad_round(hdc, rx, ry, rw, rh, 20, RGB(27, 22, 48), RGB(18, 15, 34));
+  round_stroke(hdc, rx, ry, rw, rh, 20, C_LINE, 1);
+  round_stroke(hdc, rx + 1, ry + 1, rw - 2, rh - 2, 19, RGB(74, 60, 116), 1);
+
+  text_w(hdc, L"VERSÕES NO GITHUB", rx + 22, ry + 18, 260, 18, C_MUT, g_f[FT_MICRO],
+         DT_LEFT | DT_SINGLELINE, 4);
+  {
+    wchar_t cnt[24];
+    _snwprintf(cnt, 24, L"%d", g_verCount);
+    int tw = text_wid(hdc, cnt, g_f[FT_SMALLB]);
+    round_fill(hdc, rx + 172, ry + 14, tw + 16, 22, 11, RGB(52, 44, 90));
+    text_w(hdc, cnt, rx + 172, ry + 13, tw + 16, 22, C_TXT, g_f[FT_SMALLB],
+           DT_CENTER | DT_VCENTER | DT_SINGLELINE, 0);
+  }
+  /* botão verificar */
+  {
+    int hx = rx + rw - 122, hy = ry + 12;
+    int hot = g_hoverBtn == B_REFRESH && g_pressBtn != B_REFRESH;
+    int busy = g_fetching || g_downloading;
+    round_fill(hdc, hx, hy, 100, 28, 14, hot ? RGB(62, 54, 100) : RGB(36, 31, 62));
+    if (busy) draw_spinner(hdc, hx + 16, hy + 14, 8, g_aniPhase);
+    text_w(hdc, busy ? L"verificando" : L"verificar agora", hx + (busy ? 32 : 0), hy - 1,
+           100 - (busy ? 30 : 0), 28, hot ? C_TXT : C_MUT, g_f[FT_SMALL],
+           DT_CENTER | DT_VCENTER | DT_SINGLELINE, 0);
+    if (hot) fill_rect(hdc, hx, hy + 26, 100, 2, C_GOLD_D);
+  }
+
+  /* linhas */
+  int rowH = 62;
+  int yTop = ry + 56;
+  int visRows = (rh - 56 - 10) / rowH;
+  if (visRows < 1) visRows = 1;
+  int maxScroll = g_verCount - visRows;
+  if (maxScroll < 0) maxScroll = 0;
+  if (g_scroll > maxScroll) g_scroll = maxScroll;
+  if (g_scroll < 0) g_scroll = 0;
+
+  for (int i = 0; i < visRows; i++) {
+    int idx = i + g_scroll;
+    if (idx >= g_verCount) break;
+    Ver *vv = &g_vers[idx];
+    int y = yTop + i * rowH;
+    int isSel = idx == g_selIdx;
+    int isHot = idx == g_hoverRow && !isSel;
+    int kind = ver_kind(vv);
+    if (isSel) {
+      grad_round(hdc, rx + 12, y, rw - 24, rowH - 10, 14, C_CARD_SEL, RGB(42, 35, 72));
+      round_stroke(hdc, rx + 12, y, rw - 24, rowH - 10, 14, C_GOLD_D, 1);
+    } else if (isHot) {
+      round_fill(hdc, rx + 12, y, rw - 24, rowH - 10, 14, RGB(44, 38, 74));
+    }
+    /* rádio */
+    int cx = rx + 38, cy = y + (rowH - 10) / 2;
+    draw_circle(hdc, cx, cy, 8, isSel ? C_GOLD : RGB(90, 80, 130), isSel ? 2 : 1);
+    if (isSel) fill_rect(hdc, cx - 3, cy - 3, 7, 7, C_GOLD);
+    /* tag */
+    wchar_t tg[40];
+    _snwprintf(tg, 40, L"%hs", vv->tag);
+    text_w(hdc, tg, cx + 22, y, 130, rowH - 12, isSel ? C_TXT : RGB(216, 208, 240),
+           g_f[FT_MID], DT_LEFT | DT_VCENTER | DT_SINGLELINE, 0);
+    /* sub: data + tamanho */
+    wchar_t sub[90];
+    _snwprintf(sub, 90, L"%hs  ·  %s", vv->date[0] ? vv->date : "?",
+               vv->size > 0 ? "" : "");
+    if (vv->size > 0) _snwprintf(sub, 90, L"%hs  ·  %.1f MB", vv->date[0] ? vv->date : "?",
+                                 vv->size / 1048576.0);
+    else _snwprintf(sub, 90, L"%hs", vv->date[0] ? vv->date : "");
+    text_w(hdc, sub, cx + 24, y + 28, 200, 18, C_DIM, g_f[FT_MICRO],
+           DT_LEFT | DT_VCENTER | DT_SINGLELINE, 0);
+    /* badge à direita */
+    if (kind != 2 || vv->url[0]) {
+      const wchar_t *bd = kind == 1 ? L"ESTE EXE" : (kind == 0 ? L"INSTALADA" : L"NOVA");
+      int tw = text_wid(hdc, bd, g_f[FT_MICRO]);
+      int bgc, fgc;
+      badge_colors(kind, &bgc, &fgc);
+      int bx = rx + rw - 12 - 14 - tw - 18;
+      round_fill(hdc, bx, cy - 11, tw + 18, 22, 11, (COLORREF)bgc);
+      text_w(hdc, bd, bx, cy - 12, tw + 18, 22, (COLORREF)fgc, g_f[FT_MICRO],
+             DT_CENTER | DT_VCENTER | DT_SINGLELINE, 0);
+    }
+    if (i < visRows - 1 && idx + 1 < g_verCount)
+      fill_rect(hdc, rx + 34, y + rowH - 8, rw - 68, 1, RGB(38, 32, 64));
+  }
+  if (g_verCount == 0) {
+    text_w(hdc, g_fetching ? L"consultando o GitHub…" :
+           (g_fetchFailed ? L"sem conexão — verifique sua internet" : L"nenhuma versão encontrada"),
+           rx + 24, yTop + 22, rw - 48, 30, C_MUT, g_f[FT_NORM],
+           DT_CENTER | DT_SINGLELINE, 0);
+  }
+  /* scrollbar */
+  if (maxScroll > 0) {
+    int sh = rh - 56 - 10;
+    int th = sh / (maxScroll + 1);
+    if (th < 26) th = 26;
+    int ty = yTop + g_scroll * (sh - th) / maxScroll;
+    round_fill(hdc, rx + rw - 12, ty, 5, th, 2, g_hoverRow >= 0 ? C_MUT : C_DIM);
+  }
+
+  /* legenda */
+  {
+    int lgy = ry + rh - 28;
+    int x = rx + 22;
+    const wchar_t *items[3] = { L"NOVA", L"INSTALADA", L"ESTE EXE" };
+    int cols[3][2] = { { 86, 62, 20 }, { 20, 56, 38 }, { 24, 58, 82 } };
+    int fgs[3] = { (int)C_GOLD, (int)C_GREEN, (int)C_CYAN };
+    for (int k = 0; k < 3; k++) {
+      int tw = text_wid(hdc, items[k], g_f[FT_MICRO]);
+      round_fill(hdc, x, lgy, tw + 14, 18, 9, RGB(cols[k][0], cols[k][1], cols[k][2]));
+      text_w(hdc, items[k], x, lgy - 1, tw + 14, 18, (COLORREF)fgs[k], g_f[FT_MICRO],
+             DT_CENTER | DT_VCENTER | DT_SINGLELINE, 0);
+      x += tw + 24;
+    }
+    text_w(hdc, L"→ selecione e clique em JOGAR", x, lgy - 1, rw - x + rx - 60, 18,
+           C_DIM, g_f[FT_MICRO], DT_LEFT | DT_VCENTER | DT_SINGLELINE, 0);
+  }
+
+  /* ---------------- rodapé ---------------- */
+  int fy = H - 56;
+  fill_rect(hdc, 0, fy - 10, W, 1, RGB(40, 33, 70));
+  if (g_downloading) {
+    draw_spinner(hdc, 32, fy + 24, 9, g_aniPhase);
+    wchar_t st[240];
+    double pct = g_dlTotal > 0 ? (double)g_dlGot / g_dlTotal : 0;
+    _snwprintf(st, 240, L"baixando %hs …  %d%%", g_dlJob.tag, (int)(pct * 100));
+    text_w(hdc, st, 54, fy + 6, 330, 30, C_TXT, g_f[FT_SMALLB], DT_LEFT | DT_VCENTER | DT_SINGLELINE, 0);
+    int bx = 420, bw = W - 420 - 240;
+    round_fill(hdc, bx, fy + 17, bw, 14, 7, RGB(24, 21, 44));
+    round_stroke(hdc, bx, fy + 17, bw, 14, 7, RGB(52, 44, 90), 1);
+    int fw = (int)(bw * pct);
+    if (fw > 4) {
+      HRGN rg = CreateRoundRectRgn(bx, fy + 17, bx + fw, fy + 31, 14, 14);
+      SelectClipRgn(hdc, rg);
+      grad_v(hdc, bx, fy + 17, fw, 14, C_GOLD_L, C_GOLD_D);
+      SelectClipRgn(hdc, NULL);
+      DeleteObject(rg);
+    }
+    wchar_t mb[50];
+    if (g_dlTotal > 0) _snwprintf(mb, 50, L"%.1f / %.1f MB", g_dlGot / 1048576.0, g_dlTotal / 1048576.0);
+    else _snwprintf(mb, 50, L"%.1f MB", g_dlGot / 1048576.0);
+    text_w(hdc, mb, W - 220, fy + 6, 170, 30, C_MUT, g_f[FT_SMALL], DT_RIGHT | DT_VCENTER | DT_SINGLELINE, 0);
+  } else {
+    if (g_statusErr) draw_circle(hdc, 30, fy + 22, 7, C_RED, 2);
+    else if (g_fetching) draw_spinner(hdc, 30, fy + 22, 9, g_aniPhase);
+    else { fill_rect(hdc, 27, fy + 19, 6, 6, C_GREEN); }
+    text_w(hdc, g_statusW, 52, fy + 8, W - 300, 30, g_statusErr ? C_RED : C_MUT,
+           g_f[FT_SMALL], DT_LEFT | DT_VCENTER | DT_SINGLELINE, 0);
+    text_w(hdc, L"baixa e instala qualquer versão publicada no GitHub",
+           W - 360, fy + 8, 330, 30, C_DIM, g_f[FT_MICRO],
+           DT_RIGHT | DT_VCENTER | DT_SINGLELINE, 0);
+    star_poly(hdc, W - 26, fy + 22, 6, C_GOLD_D);
+  }
+}
+
+
+/* ============ janelas: player ============ */
 static HWND g_playerWnd = NULL;
 static int g_openedBrowser = 0;
 
-static void layout_player(void) {
+#define B_PQUIT 300
+
+static void player_layout(void) {
   g_btnCount = 0;
-  int bw = PW - 60;
-  btn_add(B_OPEN, 30, 128, (bw - 12) / 2, 46);
-  btn_add(B_QUIT, 30 + (bw - 12) / 2 + 12, 128, (bw - 12) / 2, 46);
-  btn_add(B_CLOSE, PW - 40, 0, 40, 36);
+  btn_add(B_CLOSE, PW - 44, 0, 44, 40);
+  int bw = (PW - 104) / 2;
+  btn_add(B_OPEN, 36, PH - 68, bw, 48);
+  btn_add(B_PQUIT, 36 + bw + 32, PH - 68, bw, 48);
 }
-static void paint_player(HDC hdc) {
+static void player_paint(HDC hdc) {
   grad_v(hdc, 0, 0, PW, PH, C_BG1, C_BG2);
+  draw_starfield(hdc, PW, PH);
   fill_rect(hdc, 0, 0, PW, 3, C_GOLD_D);
-  /* icon */
-  star_icon(hdc, 34, 62, 16, C_GOLD);
-  text_w_shadow(hdc, L"GRAND PIXEL GAME", 60, 40, PW - 100, 26, C_GOLD, g_f[F_TITLEB],
-                DT_LEFT | DT_SINGLELINE, 4, RGB(0, 0, 0));
+  /* selo com estrela */
+  grad_round(hdc, 30, 34, 56, 56, 28, RGB(126, 100, 46), RGB(64, 46, 18));
+  round_stroke(hdc, 30, 34, 56, 56, 28, RGB(190, 150, 70), 2);
+  star_poly(hdc, 58, 62, 17, C_GOLD_L);
+  text_shadow(hdc, L"GRAND PIXEL GAME", 100, 36, PW - 140, 32, C_GOLD, g_f[FT_LOGO],
+              DT_LEFT | DT_SINGLELINE, 5, RGB(0, 0, 0), 2);
   {
-    wchar_t v[60];
-    _snwprintf(v, 60, L"jogando %hs", GPG_VERSION);
-    text_w(hdc, v, 60, 70, PW - 100, 20, C_MUT, g_f[F_SMALL], DT_LEFT | DT_SINGLELINE, 0);
+    wchar_t v[70];
+    _snwprintf(v, 70, L"jogando  %hs", GPG_VERSION);
+    text_w(hdc, v, 102, 74, PW - 140, 22, C_CYAN, g_f[FT_SMALLB], DT_LEFT | DT_SINGLELINE, 0);
   }
   text_w(hdc, L"servidor local ativo — o jogo roda no seu navegador",
-         60, 96, PW - 90, 20, RGB(190, 182, 220), g_f[F_SMALL], DT_LEFT | DT_SINGLELINE, 0);
+         102, 100, PW - 140, 20, RGB(204, 196, 234), g_f[FT_SMALL], DT_LEFT | DT_SINGLELINE, 0);
+  {
+    const wchar_t *adr = L"http://127.0.0.1:8137";
+    int tw = text_wid(hdc, adr, g_f[FT_SMALLB]);
+    round_fill(hdc, 102, 128, tw + 30, 26, 13, RGB(20, 38, 44));
+    round_stroke(hdc, 102, 128, tw + 30, 26, 13, RGB(44, 82, 94), 1);
+    fill_rect(hdc, 112, 137, 7, 7, C_GREEN);
+    text_w(hdc, adr, 128, 127, tw, 26, C_TXT, g_f[FT_SMALLB], DT_LEFT | DT_VCENTER | DT_SINGLELINE, 0);
+  }
   /* botões */
   for (int i = 0; i < g_btnCount; i++) {
     Btn *b = &g_btns[i];
+    int x = b->r.left, y = b->r.top, w = b->r.right - b->r.left, h = b->r.bottom - b->r.top;
+    int hot = g_hoverBtn == b->id && g_pressBtn != b->id;
     if (b->id == B_OPEN) {
-      int on = g_hoverBtn == B_OPEN && !g_pressBtn;
-      grad_round(hdc, b->r.left, b->r.top, b->r.right - b->r.left, b->r.bottom - b->r.top, 12,
-                 on ? RGB(255, 236, 176) : C_GOLD, on ? RGB(255, 216, 130) : C_GOLD_D);
-      text_w(hdc, L"ABRIR JOGO", b->r.left, b->r.top, b->r.right - b->r.left,
-             b->r.bottom - b->r.top, RGB(44, 28, 4), g_f[F_BOLD], DT_CENTER | DT_VCENTER | DT_SINGLELINE, 2);
-    } else if (b->id == B_QUIT) {
-      int on = g_hoverBtn == B_QUIT && !g_pressBtn;
-      round_fill(hdc, b->r.left, b->r.top, b->r.right - b->r.left, b->r.bottom - b->r.top, 12,
-                 on ? RGB(70, 36, 48) : RGB(44, 26, 38));
-      round_stroke(hdc, b->r.left, b->r.top, b->r.right - b->r.left, b->r.bottom - b->r.top, 12,
-                   RGB(140, 60, 74), 1);
-      text_w(hdc, L"ENCERRAR", b->r.left, b->r.top, b->r.right - b->r.left,
-             b->r.bottom - b->r.top, RGB(255, 190, 200), g_f[F_BOLD], DT_CENTER | DT_VCENTER | DT_SINGLELINE, 2);
+      grad_round(hdc, x, y, w, h, 15, hot ? RGB(255, 240, 190) : C_GOLD_L, hot ? C_GOLD : C_GOLD_D);
+      round_stroke(hdc, x, y, w, h, 15, RGB(255, 246, 214), 1);
+      play_tri(hdc, x + 38, y + h / 2, 10, C_BTN_TXT);
+      text_w(hdc, L"ABRIR JOGO", x + 28, y + (g_pressBtn == b->id ? 2 : 0), w - 44, h,
+             C_BTN_TXT, g_f[FT_BOLD], DT_CENTER | DT_VCENTER | DT_SINGLELINE, 3);
+    } else if (b->id == B_PQUIT) {
+      round_fill(hdc, x, y, w, h, 15, hot ? RGB(96, 44, 60) : RGB(56, 30, 44));
+      round_stroke(hdc, x, y, w, h, 15, hot ? RGB(255, 120, 140) : RGB(150, 66, 86), 1);
+      text_w(hdc, L"ENCERRAR", x, y, w, h, RGB(255, 190, 200), g_f[FT_BOLD],
+             DT_CENTER | DT_VCENTER | DT_SINGLELINE, 3);
     } else if (b->id == B_CLOSE) {
-      int cx = (b->r.left + b->r.right) / 2, cy = (b->r.top + b->r.bottom) / 2;
-      HPEN pn = CreatePen(PS_SOLID, 1, C_MUT);
-      HGDIOBJ ob = SelectObject(hdc, pn);
-      MoveToEx(hdc, cx - 5, cy - 5, NULL); LineTo(hdc, cx + 5, cy + 5);
-      MoveToEx(hdc, cx + 5, cy - 5, NULL); LineTo(hdc, cx - 5, cy + 5);
-      SelectObject(hdc, ob);
-      DeleteObject(pn);
+      int cx = x + w / 2, cy = y + h / 2;
+      line(hdc, cx - 5, cy - 5, cx + 5, cy + 5, hot ? C_TXT : C_MUT, 2);
+      line(hdc, cx + 5, cy - 5, cx - 5, cy + 5, hot ? C_TXT : C_MUT, 2);
     }
   }
 }
 
-/* --------------------------------------- janelas -------------------------- */
 static LRESULT CALLBACK player_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
   switch (msg) {
-    case WM_CREATE:
+    case WM_CREATE: {
       g_playerWnd = hwnd;
       g_hwnd = hwnd;
-      layout_player();
+      player_layout();
       if (!start_server()) {
         char other[48] = "";
         if (probe_server(other, sizeof(other))) {
@@ -1297,13 +1412,16 @@ static LRESULT CALLBACK player_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
             return 0;
           }
         }
-        MessageBoxW(hwnd, L"Nao consegui iniciar o servidor local (porta 8137 em uso).",
+        MessageBoxW(hwnd,
+                    L"Não consegui iniciar o servidor local (porta 8137 ocupada).\n\n"
+                    L"Feche o outro Grand Pixel Game aberto e tente de novo.",
                     L"Grand Pixel Game", MB_OK | MB_ICONWARNING);
         DestroyWindow(hwnd);
         return 0;
       }
-      SetTimer(hwnd, 1, 500, NULL);
+      SetTimer(hwnd, 1, 600, NULL);
       return 0;
+    }
     case WM_TIMER:
       if (wp == 1 && !g_openedBrowser) {
         g_openedBrowser = 1;
@@ -1314,8 +1432,15 @@ static LRESULT CALLBACK player_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
     case WM_ERASEBKGND: return 1;
     case WM_PAINT: {
       PAINTSTRUCT ps;
-      HDC hdc = BeginPaint(hwnd, &ps);
-      paint_player(hdc);
+      HDC dc = BeginPaint(hwnd, &ps);
+      HDC mem = CreateCompatibleDC(dc);
+      HBITMAP bm = CreateCompatibleBitmap(dc, PW, PH);
+      HGDIOBJ ob = SelectObject(mem, bm);
+      player_paint(mem);
+      BitBlt(dc, 0, 0, PW, PH, mem, 0, 0, SRCCOPY);
+      SelectObject(mem, ob);
+      DeleteObject(bm);
+      DeleteDC(mem);
       EndPaint(hwnd, &ps);
       return 0;
     }
@@ -1323,32 +1448,37 @@ static LRESULT CALLBACK player_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
       int x = GET_X_LPARAM(lp), y = GET_Y_LPARAM(lp);
       int id;
       if (btn_hit(x, y, &id)) {
-        if (id == B_OPEN) open_browser();
-        else if (id == B_QUIT || id == B_CLOSE) DestroyWindow(hwnd);
-        else if (id == B_MIN) ShowWindow(hwnd, SW_MINIMIZE);
+        g_pressBtn = id;
+        if (id == B_OPEN) { open_browser(); return 0; }
+        if (id == B_PQUIT || id == B_CLOSE) { DestroyWindow(hwnd); return 0; }
       }
       return 0;
     }
+    case WM_LBUTTONUP:
+      g_pressBtn = B_NONE;
+      return 0;
     case WM_MOUSEMOVE: {
       int x = GET_X_LPARAM(lp), y = GET_Y_LPARAM(lp);
       int id;
       int old = g_hoverBtn;
       g_hoverBtn = btn_hit(x, y, &id) ? id : B_NONE;
-      if (old != g_hoverBtn) {
-        InvalidateRect(hwnd, NULL, FALSE);
-        SetCursor(LoadCursor(NULL, g_hoverBtn != B_NONE ? IDC_HAND : IDC_ARROW));
-      }
+      if (old != g_hoverBtn) InvalidateRect(hwnd, NULL, FALSE);
       return 0;
     }
-    case WM_SETCURSOR:
-      SetCursor(LoadCursor(NULL, g_hoverBtn != B_NONE ? IDC_HAND : IDC_ARROW));
+    case WM_SETCURSOR: {
+      int id;
+      POINT pt;
+      GetCursorPos(&pt);
+      ScreenToClient(hwnd, &pt);
+      SetCursor(LoadCursor(NULL, btn_hit(pt.x, pt.y, &id) ? IDC_HAND : IDC_ARROW));
       return 1;
+    }
     case WM_NCHITTEST: {
       POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
       ScreenToClient(hwnd, &pt);
       int id;
       if (btn_hit(pt.x, pt.y, &id)) return HTCLIENT;
-      if (pt.y < 36) return HTCAPTION;
+      if (pt.y < 42) return HTCAPTION;
       return HTCLIENT;
     }
     case WM_CLOSE:
@@ -1363,64 +1493,99 @@ static LRESULT CALLBACK player_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
   return DefWindowProcW(hwnd, msg, wp, lp);
 }
 
+/* ============ janelas: launcher ============ */
+static int list_hit_row(int y) {
+  int ry = LV_Y0;
+  int rowH = 62;
+  int yTop = ry + 56;
+  int rh = CARD_H;
+  int visRows = (rh - 56 - 10) / rowH;
+  if (visRows < 1) visRows = 1;
+  if (y < yTop) return -1;
+  int k = (y - yTop) / rowH;
+  int idx = k + g_scroll;
+  if (k < 0 || idx < 0 || idx >= g_verCount || idx >= g_scroll + visRows) return -1;
+  if ((y - yTop) % rowH > rowH - 10) return -1;
+  return idx;
+}
+static void open_site(void) {
+  ShellExecuteW(NULL, L"open", L"https://github.com/Arthurowgg/htmlgame/releases",
+                NULL, NULL, SW_SHOWNORMAL);
+}
+
 static LRESULT CALLBACK launcher_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
   switch (msg) {
     case WM_CREATE: {
       g_hwnd = hwnd;
-      _snwprintf(g_statusW, 400, L"verificando atualizacoes no GitHub…");
-      /* fila inicial: só a versão embutida (a lista chega pela rede) */
+      /* lista mínima: a versão embutida (funciona 100% offline) */
       g_verCount = 1;
       memset(&g_vers[0], 0, sizeof(g_vers[0]));
       _snprintf(g_vers[0].tag, sizeof(g_vers[0].tag), "v%s", GPG_VERSION);
-      _snprintf(g_vers[0].date, sizeof(g_vers[0].date), "versao embutida");
+      _snprintf(g_vers[0].date, sizeof(g_vers[0].date), "versão embutida");
       g_vers[0].current = 1;
       g_vers[0].installed = 1;
       g_selIdx = 0;
-      layout_launcher();
-      launcher_set_status(L"verificando atualizacoes no GitHub…", 0);
+      layout_ui();
+      status_set(L"verificando atualizações no GitHub…", 0);
+      SetTimer(hwnd, 2, 140, NULL);
       start_fetch(hwnd);
       return 0;
     }
+    case WM_TIMER:
+      if (wp == 2 && (g_fetching || g_downloading)) {
+        g_aniPhase = (g_aniPhase + 12) % 360;
+        InvalidateRect(hwnd, NULL, FALSE);
+      }
+      return 0;
     case WM_ERASEBKGND: return 1;
     case WM_PAINT: {
       PAINTSTRUCT ps;
-      HDC hdc = BeginPaint(hwnd, &ps);
-      paint_launcher(hdc);
+      HDC dc = BeginPaint(hwnd, &ps);
+      HDC mem = CreateCompatibleDC(dc);
+      HBITMAP bm = CreateCompatibleBitmap(dc, W, H);
+      HGDIOBJ ob = SelectObject(mem, bm);
+      paint_launcher(mem);
+      BitBlt(dc, 0, 0, W, H, mem, 0, 0, SRCCOPY);
+      SelectObject(mem, ob);
+      DeleteObject(bm);
+      DeleteDC(mem);
       EndPaint(hwnd, &ps);
       return 0;
     }
     case WM_APP_NETOK: {
       g_fetchFailed = 0;
       g_fetching = 0;
-      launcher_refresh_rows();
+      refresh_rows();
       if (g_verCount == 0) {
         g_verCount = 1;
         memset(&g_vers[0], 0, sizeof(g_vers[0]));
         _snprintf(g_vers[0].tag, sizeof(g_vers[0].tag), "v%s", GPG_VERSION);
+        _snprintf(g_vers[0].date, sizeof(g_vers[0].date), "versão embutida");
         g_vers[0].current = 1;
         g_vers[0].installed = 1;
+        g_selIdx = 0;
       }
-      launcher_set_status(L"lista de versoes atualizada.", 0);
-      /* auto-update: a mais nova disponível não instalada */
+      /* sugere a mais nova não instalada */
       int best = -1;
       for (int i = 0; i < g_verCount; i++)
         if (!g_vers[i].current && !g_vers[i].installed && g_vers[i].url[0])
           if (best < 0 || is_newer(g_vers[i].tag, g_vers[best].tag)) best = i;
-      if (best >= 0 && g_autoUpd) {
-        g_selIdx = best;
-        wchar_t st[200];
-        _snwprintf(st, 200, L"nova versao %hs encontrada — baixando automaticamente…",
-                   g_vers[best].tag);
-        launcher_set_status(st, 0);
-        start_download(hwnd, best);
-      } else if (best >= 0) {
-        g_selIdx = best;
-        wchar_t st[200];
-        _snwprintf(st, 200, L"nova versao %hs disponivel — clique em BAIXAR E INSTALAR.",
-                   g_vers[best].tag);
-        launcher_set_status(st, 0);
+      if (best >= 0) {
+        if (g_autoUpd) {
+          g_selIdx = best;
+          wchar_t st[240];
+          _snwprintf(st, 240, L"versão nova %hs — baixando automaticamente…", g_vers[best].tag);
+          status_set(st, 0);
+          start_download(hwnd, best);
+        } else {
+          g_selIdx = best;
+          wchar_t st[240];
+          _snwprintf(st, 240, L"versão nova %hs disponível — clique em BAIXAR E INSTALAR.",
+                     g_vers[best].tag);
+          status_set(st, 0);
+        }
       } else {
-        launcher_set_status(L"voce esta com a versao mais recente.", 0);
+        status_set(L"você está com a versão mais recente.", 0);
       }
       InvalidateRect(hwnd, NULL, FALSE);
       return 0;
@@ -1428,7 +1593,7 @@ static LRESULT CALLBACK launcher_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM 
     case WM_APP_NETFAIL:
       g_fetchFailed = 1;
       g_fetching = 0;
-      launcher_set_status(L"sem conexao com o GitHub — mostrando apenas esta versao.", 1);
+      status_set(L"sem conexão com o GitHub — mostrando a versão embutida.", 1);
       InvalidateRect(hwnd, NULL, FALSE);
       return 0;
     case WM_APP_DLPROG: {
@@ -1439,15 +1604,20 @@ static LRESULT CALLBACK launcher_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM 
     }
     case WM_APP_DLDONE: {
       g_downloading = 0;
-      int ok = (int)wp;
-      if (ok) {
+      if (wp) {
         int idx = find_ver(g_dlJob.tag);
-        if (idx >= 0) g_vers[idx].installed = 1;
-        launcher_set_status(L"instalacao concluida! clique em JOGAR.", 0);
-        InvalidateRect(hwnd, NULL, FALSE);
+        if (idx >= 0) {
+          g_vers[idx].installed = 1;
+          g_selIdx = idx;
+        }
+        wchar_t st[240];
+        _snwprintf(st, 240, L"%hs instalado! É só apertar JOGAR.", g_dlJob.tag);
+        status_set(st, 0);
       } else {
-        InvalidateRect(hwnd, NULL, FALSE);
+        status_set(g_statusErr ? L"falha no download. Confira sua internet e tente de novo." :
+                   L"falha no download. Tente de novo.", 1);
       }
+      InvalidateRect(hwnd, NULL, FALSE);
       return 0;
     }
     case WM_LBUTTONDOWN: {
@@ -1459,78 +1629,65 @@ static LRESULT CALLBACK launcher_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM 
         if (id == B_CLOSE) { DestroyWindow(hwnd); return 0; }
         if (id == B_MIN) { ShowWindow(hwnd, SW_MINIMIZE); return 0; }
         if (id == B_REFRESH) {
-          if (g_bgPhase == 0) {
-            launcher_set_status(L"verificando atualizacoes…", 0);
+          if (!g_fetching && !g_downloading) {
+            status_set(L"verificando atualizações…", 0);
             start_fetch(hwnd);
-            InvalidateRect(hwnd, NULL, FALSE);
           }
+          InvalidateRect(hwnd, NULL, FALSE);
           return 0;
         }
         if (id == B_PLAY) {
-          if (g_downloading && g_dlIndex == g_selIdx) return 0;
-          Ver *v = g_selIdx >= 0 ? &g_vers[g_selIdx] : NULL;
-          if (v && v->url[0] && !v->current && !v->installed && g_bgPhase == 0) {
-            start_download(hwnd, g_selIdx);
-            InvalidateRect(hwnd, NULL, FALSE);
-            return 0;
+          Ver *v = (g_selIdx >= 0) ? &g_vers[g_selIdx] : NULL;
+          if (v) {
+            if (v->current || v->installed) play_launcher();
+            else if (v->url[0] && !g_downloading) {
+              status_set(L"baixando e instalando…", 0);
+              start_download(hwnd, g_selIdx);
+              InvalidateRect(hwnd, NULL, FALSE);
+            }
           }
-          if (v && (v->current || v->installed)) launcher_play();
           return 0;
         }
-        if (id == B_ABOUT) {
+        if (id == B_AUTOUPD) {
           g_autoUpd = !g_autoUpd;
           InvalidateRect(hwnd, NULL, FALSE);
           return 0;
         }
-        if (y < 46) { /* botões de janela/card não clicados → arrasta */
+        if (id == B_SITE) { open_site(); return 0; }
+        if (y < 58) {
           ReleaseCapture();
           SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
         }
         return 0;
       }
-      if (y < 46) { /* drag no topo fora dos botões */
+      if (y < 58) {
         ReleaseCapture();
         SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
         return 0;
       }
-      /* clique na lista */
-      int ry = 62, y0 = ry + 50;
-      int rowH = 56;
-      int idx = (y - y0) / rowH + g_scroll;
-      if (y >= y0 && idx >= 0 && idx < g_verCount && x >= 336) {
-        launcher_select(idx);
-        if (y - (y0 + idx * rowH - g_scroll * rowH) < rowH - 8) {
-          /* selecionou */
-        }
-      }
+      int row = list_hit_row(y);
+      if (row >= 0 && x >= RV_X0 && x < RV_X0 + RV_W) select_row(row);
       return 0;
     }
     case WM_LBUTTONUP:
       g_pressBtn = B_NONE;
+      InvalidateRect(hwnd, NULL, FALSE);
       return 0;
     case WM_MOUSEMOVE: {
       int x = GET_X_LPARAM(lp), y = GET_Y_LPARAM(lp);
       int id;
-      int old = g_hoverBtn, oldRow = g_hoverRow;
+      int oldBtn = g_hoverBtn, oldRow = g_hoverRow;
       g_hoverBtn = btn_hit(x, y, &id) ? id : B_NONE;
-      int ry = 62, y0 = ry + 50;
-      int rowH = 56;
-      int rowIdx = -1;
-      if (y >= y0 && x >= 336) {
-        int k = (y - y0) / rowH;
-        int idx = k + g_scroll;
-        if (k >= 0 && idx >= 0 && idx < g_verCount) rowIdx = idx;
-      }
-      g_hoverRow = rowIdx;
-      if (old != g_hoverBtn || oldRow != g_hoverRow)
+      g_hoverRow = (x >= RV_X0 && x < RV_X0 + RV_W) ? list_hit_row(y) : -1;
+      if (oldBtn != g_hoverBtn || oldRow != g_hoverRow)
         InvalidateRect(hwnd, NULL, FALSE);
       return 0;
     }
     case WM_MOUSEWHEEL: {
       int delta = GET_WHEEL_DELTA_WPARAM(wp);
-      int vis = (g_listH - 58) / 56;
-      if (vis < 1) vis = 1;
-      int maxScroll = g_verCount - vis;
+      int visRows = (CARD_H - 56 - 10) / 62;
+      if (visRows < 1) visRows = 1;
+      int maxScroll = g_verCount - visRows;
       if (maxScroll < 0) maxScroll = 0;
       g_scroll -= delta / 120;
       if (g_scroll < 0) g_scroll = 0;
@@ -1543,23 +1700,23 @@ static LRESULT CALLBACK launcher_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM 
       POINT pt;
       GetCursorPos(&pt);
       ScreenToClient(hwnd, &pt);
-      BOOL over = btn_hit(pt.x, pt.y, &id) ||
-        (pt.y > 110 && pt.x >= 336 && g_hoverRow >= 0);
+      int over = btn_hit(pt.x, pt.y, &id) ||
+                 (pt.x >= RV_X0 && pt.x < RV_X0 + RV_W && list_hit_row(pt.y) >= 0);
       SetCursor(LoadCursor(NULL, over ? IDC_HAND : IDC_ARROW));
       return 1;
     }
     case WM_KEYDOWN:
       if (wp == VK_ESCAPE || wp == 'Q') { DestroyWindow(hwnd); return 0; }
-      if (wp == VK_RETURN) { /* joga selecionado */
-        Ver *v = g_selIdx >= 0 ? &g_vers[g_selIdx] : NULL;
+      if (wp == VK_RETURN) {
+        Ver *v = (g_selIdx >= 0) ? &g_vers[g_selIdx] : NULL;
         if (v) {
-          if (v->current || v->installed) launcher_play();
-          else if (g_bgPhase == 0 && v->url[0]) start_download(hwnd, g_selIdx);
+          if (v->current || v->installed) play_launcher();
+          else if (v->url[0] && !g_downloading) start_download(hwnd, g_selIdx);
         }
         return 0;
       }
-      if (wp == VK_UP) { if (g_selIdx > 0) launcher_select(g_selIdx - 1); return 0; }
-      if (wp == VK_DOWN) { if (g_selIdx < g_verCount - 1) launcher_select(g_selIdx + 1); return 0; }
+      if (wp == VK_UP && g_selIdx > 0) select_row(g_selIdx - 1);
+      if (wp == VK_DOWN && g_selIdx < g_verCount - 1) select_row(g_selIdx + 1);
       return 0;
     case WM_CLOSE:
       DestroyWindow(hwnd);
@@ -1571,18 +1728,17 @@ static LRESULT CALLBACK launcher_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM 
   return DefWindowProcW(hwnd, msg, wp, lp);
 }
 
-/* --------------------------------------- entrada -------------------------- */
+/* ============ entrada ============ */
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmd, int nShow) {
   (void)hPrev;
   (void)nShow;
   g_hInst = hInst;
-  /* DPI aware (opcional, só Windows 10+) */
   {
     HMODULE ud = LoadLibraryA("user32.dll");
     if (ud) {
       typedef BOOL(WINAPI *Fn)(int);
       Fn f = (Fn)(void *)GetProcAddress(ud, "SetProcessDpiAwarenessContext");
-      if (f) f(-4); /* DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 */
+      if (f) f(-4);
     }
   }
   fonts_init();
@@ -1590,27 +1746,30 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmd, int nShow) {
 
   int playMode = (wcsstr(lpCmd, L"--play") != NULL);
 
+  /* nomes de classe estáticos: RegisterClass guarda o ponteiro */
+  static wchar_t clsLauncher[] = L"GPGLauncherWnd_v12";
+  static wchar_t clsPlayer[96];
+  if (playMode) {
+    char san[64];
+    version_san(san, sizeof(san), GPG_VERSION);
+    MultiByteToWideChar(CP_UTF8, 0, san, -1, clsPlayer, 64);
+    wcscat(clsPlayer, L"_GPGPlay");
+  }
+
   WNDCLASSW wc;
   memset(&wc, 0, sizeof(wc));
   wc.hInstance = hInst;
   wc.hCursor = LoadCursor(NULL, IDC_ARROW);
   wc.hIcon = LoadIconW(hInst, MAKEINTRESOURCE(1));
   wc.lpfnWndProc = launcher_wndproc;
-  wc.lpszClassName = L"GPGLauncherWnd";
+  wc.lpszClassName = clsLauncher;
   RegisterClassW(&wc);
 
   if (playMode) {
-    char cls[64];
-    char san[40];
-    version_san(san, sizeof(san), GPG_VERSION);
-    _snprintf(cls, sizeof(cls), "GPGPlay_%s", san);
-    wchar_t wcls[80];
-    MultiByteToWideChar(CP_UTF8, 0, cls, -1, wcls, 80);
     wc.lpfnWndProc = player_wndproc;
-    wc.lpszClassName = wcls;
+    wc.lpszClassName = clsPlayer;
     if (!RegisterClassW(&wc)) {
-      /* classe duplicada de outra instância: foca a janela existente */
-      HWND ex = FindWindowW(wcls, NULL);
+      HWND ex = FindWindowW(clsPlayer, NULL);
       if (ex) { ShowWindow(ex, SW_SHOW); SetForegroundWindow(ex); }
       return 0;
     }
@@ -1618,20 +1777,30 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmd, int nShow) {
     SystemParametersInfoW(SPI_GETWORKAREA, 0, &wa, 0);
     int cx = wa.left + (wa.right - wa.left - PW) / 2;
     int cy = wa.top + (wa.bottom - wa.top - PH) / 2;
-    HWND hw = CreateWindowExW(WS_EX_APPWINDOW, wcls, L"Grand Pixel Game",
-                              WS_POPUP | WS_VISIBLE,
-                              cx, cy, PW, PH, NULL, NULL, hInst, NULL);
-    if (!hw) return 1;
+    HWND hw = CreateWindowExW(WS_EX_APPWINDOW, clsPlayer, L"Grand Pixel Game",
+                              WS_POPUP | WS_VISIBLE, cx, cy, PW, PH, NULL, NULL,
+                              hInst, NULL);
+    if (!hw) {
+      wchar_t m[300];
+      _snwprintf(m, 300, L"Não consegui abrir a janela do jogo (erro %lu).", GetLastError());
+      MessageBoxW(NULL, m, L"Grand Pixel Game", MB_OK | MB_ICONERROR);
+      return 1;
+    }
   } else {
     RECT wa;
     SystemParametersInfoW(SPI_GETWORKAREA, 0, &wa, 0);
-    W = 980; H = 620;
     int cx = wa.left + (wa.right - wa.left - W) / 2;
     int cy = wa.top + (wa.bottom - wa.top - H) / 2;
-    HWND hw = CreateWindowExW(0, L"GPGLauncherWnd", L"Grand Pixel Game — Launcher",
-                              WS_POPUP | WS_VISIBLE,
-                              cx, cy, W, H, NULL, NULL, hInst, NULL);
-    if (!hw) return 1;
+    HWND hw = CreateWindowExW(0, clsLauncher, L"Grand Pixel Game — Launcher",
+                              WS_POPUP | WS_VISIBLE, cx, cy, W, H, NULL, NULL,
+                              hInst, NULL);
+    if (!hw) {
+      wchar_t m[300];
+      _snwprintf(m, 300, L"Não consegui abrir o launcher (erro %lu).\n\n"
+                 L"Se o problema continuar, baixe o .exe de novo.", GetLastError());
+      MessageBoxW(NULL, m, L"Grand Pixel Game", MB_OK | MB_ICONERROR);
+      return 1;
+    }
   }
 
   MSG msg;

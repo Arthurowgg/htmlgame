@@ -5,6 +5,25 @@ Todo release publica o executável Windows (GrandPixelGame-vX.Y.Z-win64.exe)
 na árvore da tag (pasta `dist/`) e, quando a rede permitir, como asset do
 release no GitHub.
 
+## [1.2.0] — 2026-09-09
+
+Launcher reformulado (visual novo) e correções de robustez do .exe.
+
+### Corrigido
+- Possíveis causas de o .exe "não abrir": nomes de classe de janela agora
+  são estáticos (o Windows guarda o ponteiro, não cópia — antes a janela do
+  modo jogador podia falhar silenciosamente), e qualquer falha de criação
+  de janela mostra um diálogo de erro com o código em vez de sair mudo.
+- Download/estrutura do executável revisados e validados (PE, recursos,
+  imports) — o .exe é um PE normal de ~460 KB, sem compactação.
+
+### Alterado
+- Launcher muito mais bonito: fundo com estrelas e gradiente, double-buffer
+  (sem flicker), card de versão selecionada com badges e botão JOGAR em
+  ouro com brilho, lista com rádios/badges/legenda, spinner animado,
+  barra de progresso com %, checkbox de auto-update com tooltip, janela do
+  jogador redesenhada com selo, endereço do servidor e botões grandes.
+
 ## [1.1.1] — 2026-09-09
 
 Disponibilização do download do launcher (assets).
