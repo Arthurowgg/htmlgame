@@ -52,22 +52,20 @@ Opções: volume dos efeitos, som liga/desliga e distância de visão
 
 ## Versão Windows (.exe)
 
-Cada release do Grand Pixel Game publica o **executável Windows**:
+Todo release do Grand Pixel Game publica o **launcher Windows** — um único
+arquivo (~450 KB) que instala e joga, atualiza sozinho e deixa escolher
+qualquer versão publicada:
 
-- `GrandPixelGame-v1.1.0-win64.exe` — launcher + jogo completo num único
-  arquivo (~450 KB, sem instalação, sem Node): abre numa janela bonita com
-  a versão selecionada, lista as versões publicadas no GitHub, baixa a que
-  você escolher (ou atualiza sozinho para a mais recente) e abre o jogo no
-  navegador com servidor local embutido.
-- O download direto do .exe de cada versão fica em
-  `dist/GrandPixelGame-vX.Y.Z-win64.exe` na árvore da tag, também publicado
-  como asset do release quando o ambiente de publicação tem acesso ao GitHub
-  (uploads.github.com). Em qualquer caso o link da tag funciona:
-  `https://github.com/Arthurowgg/htmlgame/raw/refs/tags/vX.Y.Z/dist/GrandPixelGame-vX.Y.Z-win64.exe`.
+- Abra a aba **Releases** (ou [github.com/Arthurowgg/htmlgame/releases](https://github.com/Arthurowgg/htmlgame/releases));
+- O download está **no topo da descrição** de cada release:
+  `GrandPixelGame-vX.Y.Z-win64.exe` (link direto para a árvore da tag,
+  formato `https://github.com/Arthurowgg/htmlgame/raw/refs/tags/vX.Y.Z/dist/GrandPixelGame-vX.Y.Z-win64.exe`);
+- Quando o ambiente de publicação tem acesso a uploads.github.com, o .exe
+  também é anexado como asset formal (seção Assets) via
+  `python3 desktop/win/publish.py vX.Y.Z`.
 
-Para gerar o .exe localmente: `python3 desktop/win/build_win.py`
-(requer o pacote Python `ziglang` — `pip install --user --break-system-packages ziglang`).
-Para publicar os assets num release: `python3 desktop/win/publish.py vX.Y.Z`.
+Gerar o .exe localmente: `python3 desktop/win/build_win.py` (requer o pacote
+Python `ziglang` — `pip install --user --break-system-packages ziglang`).
 
 ## Versões e releases
 

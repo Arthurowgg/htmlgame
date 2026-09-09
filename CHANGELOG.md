@@ -5,6 +5,22 @@ Todo release publica o executável Windows (GrandPixelGame-vX.Y.Z-win64.exe)
 na árvore da tag (pasta `dist/`) e, quando a rede permitir, como asset do
 release no GitHub.
 
+## [1.1.1] — 2026-09-09
+
+Disponibilização do download do launcher (assets).
+
+### Corrigido
+- A aba Assets das releases mostrava só os arquivos de código-fonte
+  automáticos: o host de upload do GitHub (uploads.github.com) está
+  bloqueado na rede do ambiente de publicação, então nenhum asset formal
+  podia ser anexado por aqui.
+- Cada release agora traz o download **no topo da descrição**, com link
+  direto para o .exe versionado na árvore da própria tag
+  (`dist/GrandPixelGame-vX.Y.Z-win64.exe`), que funciona para qualquer
+  pessoa; `desktop/win/publish.py` anexa os binários como assets formais
+  quando a rede permitir.
+- Adicionado `dist/README.md` explicando os binários de cada release.
+
 ## [1.1.0] — 2026-09-09
 
 Launcher Windows do Grand Pixel Game.
