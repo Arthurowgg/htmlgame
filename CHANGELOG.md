@@ -5,6 +5,20 @@ Todo release publica o executável Windows (GrandPixelGame-vX.Y.Z-win64.exe)
 na árvore da tag (pasta `dist/`) e, quando a rede permitir, como asset do
 release no GitHub.
 
+## [1.3.2] — 2026-09-09
+
+Launcher como aplicativo Windows normal (anti-falso-positivo).
+
+### Alterado
+- **Janelas com moldura padrão do Windows**: barra de título nativa com
+  ícone, minimizar e fechar do sistema (launcher e jogador) — nada de
+  janela sem borda custom.
+- **VERSIONINFO embutido no .exe**: CompanyName, FileDescription, versão,
+  produto e copyright (recurso 16 no PE) — a ausência disso é o principal
+  gatilho de heurística de antivírus para binários pequenos.
+- Registro de classe com WNDCLASSEX (ícone grande + pequeno), fundo de
+  janela por paint próprio, posição central via AdjustWindowRect.
+
 ## [1.3.1] — 2026-09-09
 
 Diagnóstico de "exe não abre".

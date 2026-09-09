@@ -11,7 +11,7 @@ const MAIN = MAIN_SRC.map(m => Object.assign({}, m, {
   alvo: m.alvo ? m.alvo : m.item ? { item: m.item, n: m.n } : m.boss ? { boss: m.boss } : null,
 }));
 
-const VERSION = '1.3.1';
+const VERSION = '1.3.2';
 const SEED = 20260908;
 const world = new World(SEED);
 const glCanvas = document.getElementById('gl');

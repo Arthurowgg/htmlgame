@@ -1160,9 +1160,6 @@ static void play_launcher(void) {
 
 static void layout_ui(void) {
   g_btnCount = 0;
-  /* topo: min + fechar (à direita), 56px de altura */
-  btn_add(B_MIN,   W - 92, 0, 46, 58);
-  btn_add(B_CLOSE, W - 46, 0, 46, 58);
   /* card esquerdo */
   btn_add(B_PLAY, LV_X0 + 20, LV_Y0 + CARD_H - 74, LV_W - 40, 56);
   btn_add(B_AUTOUPD, LV_X0 + 16, LV_Y0 + CARD_H - 110, LV_W - 32, 30);
@@ -1490,10 +1487,9 @@ static int g_openedBrowser = 0;
 
 static void player_layout(void) {
   g_btnCount = 0;
-  btn_add(B_CLOSE, PW - 44, 0, 44, 40);
-  int bw = (PW - 104) / 2;
+  int bw = (PW - 120) / 2;
   btn_add(B_OPEN, 36, PH - 68, bw, 48);
-  btn_add(B_PQUIT, 36 + bw + 32, PH - 68, bw, 48);
+  btn_add(B_PQUIT, 36 + bw + 48, PH - 68, bw, 48);
 }
 static void player_paint(HDC hdc) {
   grad_v(hdc, 0, 0, PW, PH, C_BG1, C_BG2);
@@ -1650,14 +1646,6 @@ static LRESULT CALLBACK player_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
       ScreenToClient(hwnd, &pt);
       SetCursor(LoadCursor(NULL, btn_hit(pt.x, pt.y, &id) ? IDC_HAND : IDC_ARROW));
       return 1;
-    }
-    case WM_NCHITTEST: {
-      POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
-      ScreenToClient(hwnd, &pt);
-      int id;
-      if (btn_hit(pt.x, pt.y, &id)) return HTCLIENT;
-      if (pt.y < 42) return HTCAPTION;
-      return HTCLIENT;
     }
     case WM_CLOSE:
       stop_server();
@@ -1839,15 +1827,6 @@ static LRESULT CALLBACK launcher_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM 
           return 0;
         }
         if (id == B_SITE) { open_site(); return 0; }
-        if (y < 58) {
-          ReleaseCapture();
-          SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
-        }
-        return 0;
-      }
-      if (y < 58) {
-        ReleaseCapture();
-        SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
         return 0;
       }
       int row = list_hit_row(y);
@@ -1981,19 +1960,26 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmd, int nShow) {
     (void)runMutex; /* mantém o mutex até o processo sair */
   }
 
-  WNDCLASSW wc;
+  WNDCLASSEXW wc;
   memset(&wc, 0, sizeof(wc));
+  wc.cbSize = sizeof(wc);
   wc.hInstance = hInst;
   wc.hCursor = LoadCursor(NULL, IDC_ARROW);
   wc.hIcon = LoadIconW(hInst, MAKEINTRESOURCE(1));
+  wc.hIconSm = LoadIconW(hInst, MAKEINTRESOURCE(1));
+  wc.hbrBackground = NULL;
   wc.lpfnWndProc = launcher_wndproc;
   wc.lpszClassName = clsLauncher;
-  RegisterClassW(&wc);
+  RegisterClassExW(&wc);
 
   if (playMode) {
+    DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
     wc.lpfnWndProc = player_wndproc;
     wc.lpszClassName = clsPlayer;
-    RegisterClassW(&wc);
+    RegisterClassExW(&wc);
+    RECT wr = { 0, 0, PW, PH };
+    AdjustWindowRect(&wr, style, FALSE);
+    int cw = wr.right - wr.left, ch = wr.bottom - wr.top;
     RECT wa;
     if (!SystemParametersInfoW(SPI_GETWORKAREA, 0, &wa, 0) ||
         (wa.right - wa.left) < 200 || (wa.bottom - wa.top) < 200) {
@@ -2001,10 +1987,10 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmd, int nShow) {
       wa.right = GetSystemMetrics(SM_CXSCREEN);
       wa.bottom = GetSystemMetrics(SM_CYSCREEN);
     }
-    int cx = wa.left + (wa.right - wa.left - PW) / 2;
-    int cy = wa.top + (wa.bottom - wa.top - PH) / 2;
-    HWND hw = CreateWindowExW(WS_EX_APPWINDOW, clsPlayer, L"Grand Pixel Game",
-                              WS_POPUP | WS_VISIBLE, cx, cy, PW, PH, NULL, NULL,
+    int cx = wa.left + (wa.right - wa.left - cw) / 2;
+    int cy = wa.top + (wa.bottom - wa.top - ch) / 2;
+    HWND hw = CreateWindowExW(0, clsPlayer, L"Grand Pixel Game",
+                              style | WS_VISIBLE, cx, cy, cw, ch, NULL, NULL,
                               hInst, NULL);
     if (!hw) {
       DWORD le = GetLastError();
@@ -2022,6 +2008,10 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmd, int nShow) {
     ShowWindow(hw, SW_SHOW);
     SetForegroundWindow(hw);
   } else {
+    DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+    RECT wr = { 0, 0, W, H };
+    AdjustWindowRect(&wr, style, FALSE);
+    int cw = wr.right - wr.left, ch = wr.bottom - wr.top;
     RECT wa;
     if (!SystemParametersInfoW(SPI_GETWORKAREA, 0, &wa, 0) ||
         (wa.right - wa.left) < 200 || (wa.bottom - wa.top) < 200) {
@@ -2029,10 +2019,10 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmd, int nShow) {
       wa.right = GetSystemMetrics(SM_CXSCREEN);
       wa.bottom = GetSystemMetrics(SM_CYSCREEN);
     }
-    int cx = wa.left + (wa.right - wa.left - W) / 2;
-    int cy = wa.top + (wa.bottom - wa.top - H) / 2;
+    int cx = wa.left + (wa.right - wa.left - cw) / 2;
+    int cy = wa.top + (wa.bottom - wa.top - ch) / 2;
     HWND hw = CreateWindowExW(0, clsLauncher, L"Grand Pixel Game — Launcher",
-                              WS_POPUP | WS_VISIBLE, cx, cy, W, H, NULL, NULL,
+                              style | WS_VISIBLE, cx, cy, cw, ch, NULL, NULL,
                               hInst, NULL);
     if (!hw) {
       DWORD le = GetLastError();
