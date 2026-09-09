@@ -5,6 +5,29 @@ Todo release publica o executável Windows (GrandPixelGame-vX.Y.Z-win64.exe)
 na árvore da tag (pasta `dist/`) e, quando a rede permitir, como asset do
 release no GitHub.
 
+## [1.3.0] — 2026-09-09
+
+Launcher como aplicativo de verdade + conteúdo por versão.
+
+### Alterado
+- **Janela própria (modo app)**: JOGAR abre o jogo numa janela de aplicativo
+  (Edge `--app`, 1280x800) em vez de aba solta do navegador; sem Edge, usa
+  o navegador padrão.
+- **Download de conteúdo, não de executável**: o launcher baixa apenas o
+  `web.zip` (~65-210 KB) de cada versão, instala em
+  `%LOCALAPPDATA%\GrandPixelGame\versions\<tag>\web` (descompactador
+  STORE próprio, testado) e roda aquela versão servindo do disco. Nenhum
+  código baixado é executado.
+- **Instância única por versão**: abrir duas vezes o mesmo jogo só traz a
+  janela de volta; abrir uma versão diferente toma a porta da anterior
+  educadamente (endpoint de encerramento).
+- Erros de janela agora mostram diálogo com o código do erro (GetLastError)
+  e instruções, em vez de falhar em silêncio.
+- Rebranding: título do jogo/aba/loading/diário sem "Solaria" —
+  o nome é **Grand Pixel Game** (Solaria permanece só como vila na
+  história); versão do jogo -> 1.3.0.
+- Zip web publicado como STORE (compatível com o instalador do launcher).
+
 ## [1.2.0] — 2026-09-09
 
 Launcher reformulado (visual novo) e correções de robustez do .exe.

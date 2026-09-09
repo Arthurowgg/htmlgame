@@ -123,7 +123,9 @@ def main():
     cc = [zig, 'cc', '-target', 'x86_64-windows-gnu', '-O2', '-std=c99', '-municode',
           '-DGPG_VERSION="%s"' % version,
           '-I' + GEN,
+          '-I' + HERE,
           os.path.join(HERE, 'launcher.c'),
+          os.path.join(HERE, 'zipstore.c'),
           os.path.join(GEN, 'embedded.c'),
           res,
           '-Wl,/subsystem:windows',
@@ -133,7 +135,7 @@ def main():
     print('exe:', exe, os.path.getsize(exe) // 1024, 'KB')
 
     zip_path = os.path.join(DIST, 'GrandPixelGame-v%s-web.zip' % version)
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as z:
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_STORED) as z:
         for rel in WEB_FILES:
             full = os.path.join(ROOT, rel)
             if os.path.isfile(full):

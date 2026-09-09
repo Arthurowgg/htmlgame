@@ -11,7 +11,7 @@ const MAIN = MAIN_SRC.map(m => Object.assign({}, m, {
   alvo: m.alvo ? m.alvo : m.item ? { item: m.item, n: m.n } : m.boss ? { boss: m.boss } : null,
 }));
 
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const SEED = 20260908;
 const world = new World(SEED);
 const glCanvas = document.getElementById('gl');
@@ -299,7 +299,7 @@ function endOfStory() {
   saveGame();
   if (!finaleShown) {
     finaleShown = true;
-    bannerFx('★ SOLARIA ESTÁ SALVA ★', '#ffd76a');
+    bannerFx('★ A LUZ VOLTOU AO VALE ★', '#ffd76a');
     toastFx('a luz voltou ao vale — e ainda há 59 missões por aí…');
     audio.sfx('seal');
     saveGame();
@@ -1151,7 +1151,7 @@ function renderHist(c) {
   const done = stateM.filter(v => v === 2).length;
   $('log-progress').textContent = 'história ' + done + '/' + MAIN.length + ' · vale ' + side.filter(v => v === 2).length + '/' + SIDE_TOTAL;
   let h = '';
-  h += '<div class="gr-title">A lenda de Solaria</div>';
+  h += '<div class="gr-title">Capítulos da jornada</div>';
   for (let i = 0; i < MAIN.length; i++) {
     const m = MAIN[i];
     const st = stateM[i] === 2 ? 'done' : stateM[i] === 1 ? 'active' : '';

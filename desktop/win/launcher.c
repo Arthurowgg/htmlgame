@@ -30,6 +30,7 @@
 #include <wchar.h>
 #include <math.h>
 #include "embedded.h"
+#include "zipstore.h"
 
 #ifndef GPG_VERSION
 #define GPG_VERSION "0.0.0"
@@ -100,10 +101,10 @@ static void version_san(char *out, size_t cap, const char *tag) {
 typedef struct {
   char tag[24];          /* v1.2.3 */
   char date[24];
-  char url[700];
+  char url[700];         /* link do conteúdo (web.zip) desta versão */
   char name[160];
-  long long size;        /* do asset exe (0 = desconhecido) */
-  int installed;         /* exe baixado presente em versions\ */
+  long long size;        /* tamanho do conteúdo (0 = desconhecido) */
+  int installed;         /* conteúdo presente em versions\<tag>\web */
   int current;           /* igual à versão embutida deste exe */
 } Ver;
 
@@ -135,29 +136,26 @@ static int cmp_ver(const char *a, const char *b) {
 }
 static int is_newer(const char *a, const char *b) { return cmp_ver(a, b) > 0; }
 
+static int version_installed_dir(const char *tag, wchar_t *out, size_t cap, int *any) {
+  /* devolve em out o caminho versions\<tag>\web e 1 se tem index.html */
+  ensure_verdir();
+  wchar_t tagW[40];
+  MultiByteToWideChar(CP_UTF8, 0, tag, -1, tagW, 40);
+  wchar_t web[MAX_PATH * 2];
+  _snwprintf(web, MAX_PATH * 2, L"%s\\versions\\%s\\web", g_appdirW, tagW);
+  if (out) _snwprintf(out, cap, L"%s", web);
+  wchar_t idx[MAX_PATH * 2];
+  _snwprintf(idx, MAX_PATH * 2, L"%s\\index.html", web);
+  *any = (GetFileAttributesW(idx) != INVALID_FILE_ATTRIBUTES);
+  return *any;
+}
 static void find_installed(void) {
   ensure_verdir();
-  wchar_t pat[MAX_PATH * 2];
-  _snwprintf(pat, MAX_PATH * 2, L"%s\\versions\\GrandPixelGame-v*.exe", g_appdirW);
-  WIN32_FIND_DATAW fd;
-  HANDLE h = FindFirstFileW(pat, &fd);
-  if (h == INVALID_HANDLE_VALUE) return;
-  do {
-    char nm[MAX_PATH];
-    WideCharToMultiByte(CP_UTF8, 0, fd.cFileName, -1, nm, sizeof(nm), NULL, NULL);
-    /* GrandPixelGame-v1.2.3-win64.exe -> extrai v1.2.3 */
-    char *p = strstr(nm, "-v");
-    if (!p) continue;
-    p += 2;
-    char tag[24]; int i = 0;
-    while (p[i] && (p[i] == '.' || (p[i] >= '0' && p[i] <= '9')) && i < 20) { tag[i] = p[i]; i++; }
-    tag[i] = 0;
-    if (i < 3) continue;
-    char full[16]; _snprintf(full, sizeof(full), "v%s", tag);
-    for (int k = 0; k < g_verCount; k++)
-      if (strcmp(g_vers[k].tag, full) == 0) g_vers[k].installed = 1;
-  } while (FindNextFileW(h, &fd));
-  FindClose(h);
+  for (int k = 0; k < g_verCount; k++) {
+    int any = 0;
+    version_installed_dir(g_vers[k].tag, NULL, 0, &any);
+    g_vers[k].installed = any;
+  }
 }
 
 /* ------------------------------------------------------- JSON mínimo */
@@ -412,8 +410,8 @@ static void parse_releases(const char *json, size_t len) {
               else jp_skip(&j);
             }
             jp_ch(&j, '}');
-            /* queremos o asset .exe do jogo */
-            if (!v.url[0] && asset_prefer(an) && au[0]) {
+            /* queremos o asset de conteúdo (web.zip) do jogo */
+            if (!v.url[0] && ends_with(an, "-web.zip") && strstr(an, "GrandPixelGame-") && au[0]) {
               strncpy(v.name, an, sizeof(v.name) - 1);
               strncpy(v.url, au, sizeof(v.url) - 1);
               v.size = asz;
@@ -428,9 +426,9 @@ static void parse_releases(const char *json, size_t len) {
     if (!draft && v.tag[0] && parse_ver(v.tag, pv)) {
       if (strlen(v.date) > 10) v.date[10] = 0;
       if (!v.url[0]) {
-        /* sem asset .exe no release: baixa o binário versionado na árvore da tag */
+        /* sem asset anexado: o conteúdo sempre está versionado na árvore da tag */
         _snprintf(v.url, sizeof(v.url),
-                  "https://github.com/Arthurowgg/htmlgame/raw/refs/tags/%s/dist/GrandPixelGame-%s-win64.exe",
+                  "https://github.com/Arthurowgg/htmlgame/raw/refs/tags/%s/dist/GrandPixelGame-%s-web.zip",
                   v.tag, v.tag);
       }
       g_vers[count] = v;
@@ -499,10 +497,30 @@ static void net_download(void *unused) {
   (void)unused;
   wchar_t errW[300];
   int ok = http_save(g_dlJob.url, g_dlJob.dest, dl_prog_cb, NULL, errW, sizeof(errW));
-  if (ok && g_dlJob.dest[0] && g_hwnd)
+  int extracted = -1;
+  if (ok && g_dlJob.dest[0]) {
+    /* extrai o conteúdo para versions\<tag>\web e remove o zip temporário */
+    char zipA[MAX_PATH * 2], outA[MAX_PATH * 2];
+    WideCharToMultiByte(CP_UTF8, 0, g_dlJob.dest, -1, zipA, sizeof(zipA), NULL, NULL);
+    wchar_t webW[MAX_PATH * 2];
+    int any = 0;
+    version_installed_dir(g_dlJob.tag, webW, MAX_PATH * 2, &any);
+    WideCharToMultiByte(CP_UTF8, 0, webW, -1, outA, sizeof(outA), NULL, NULL);
+    wchar_t d1[MAX_PATH * 2], d2[MAX_PATH * 2];
+    _snwprintf(d1, MAX_PATH * 2, L"%s\\versions", g_appdirW);
+    CreateDirectoryW(d1, NULL);
+    _snwprintf(d2, MAX_PATH * 2, L"%s\\versions\\%hs", g_appdirW, g_dlJob.tag);
+    CreateDirectoryW(d2, NULL);
+    CreateDirectoryW(webW, NULL);
+    extracted = zip_extract_store(zipA, outA);
+    DeleteFileW(g_dlJob.dest);
+  }
+  if (ok && extracted >= 0 && g_hwnd)
     PostMessageW(g_hwnd, WM_APP_DLDONE, 1, 0);
   else if (g_hwnd) {
     if (!ok) _snprintf(g_status, sizeof(g_status), "erro ao baixar %s: %ls", g_dlJob.tag, errW);
+    else if (extracted < 0) _snprintf(g_status, sizeof(g_status),
+                                      "erro ao instalar %s (arquivo corrompido?)", g_dlJob.tag);
     else _snprintf(g_status, sizeof(g_status), "erro ao baixar %s", g_dlJob.tag);
     g_statusErr = 1;
     PostMessageW(g_hwnd, WM_APP_DLDONE, 0, 0);
@@ -529,8 +547,8 @@ static void start_download(HWND hwnd, int idx) {
   ensure_verdir();
   char san[40];
   version_san(san, sizeof(san), g_vers[idx].tag);
-  _snwprintf(g_dlJob.dest, MAX_PATH * 2, L"%s\\versions\\GrandPixelGame-v%s-win64.exe",
-             g_appdirW, san);
+  _snwprintf(g_dlJob.dest, MAX_PATH * 2, L"%s\\versions\\gpg-%hs.zip",
+             g_appdirW, g_vers[idx].tag);
   MultiByteToWideChar(CP_UTF8, 0, g_vers[idx].url, -1, g_dlJob.url, 900);
   strncpy(g_dlJob.tag, g_vers[idx].tag, 23);
   g_downloading = 1;
@@ -540,7 +558,7 @@ static void start_download(HWND hwnd, int idx) {
   { /* zera throttle de progresso */
     HWND zz = NULL; (void)zz;
   }
-  _snprintf(g_status, sizeof(g_status), "baixando %s…", g_vers[idx].tag);
+  _snprintf(g_status, sizeof(g_status), "baixando o conteúdo de %s…", g_vers[idx].tag);
   g_statusErr = 0;
   HANDLE h = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)net_download, NULL, 0, NULL);
   if (h) { CloseHandle(h); g_netThread = h; }
@@ -551,6 +569,8 @@ static void start_download(HWND hwnd, int idx) {
 static SOCKET g_lsn = INVALID_SOCKET;
 static volatile int g_serveStop = 0;
 static HANDLE g_serveThread = NULL;
+static char g_webRootA[1024] = "";   /* pasta do conteúdo ("" = embutido) */
+static char g_srvVer[24] = GPG_VERSION;  /* versão sendo servida */
 
 static const char *mime_of(const char *path) {
   if (ends_with(path, ".html")) return "text/html; charset=utf-8";
@@ -604,13 +624,21 @@ static void serve_client(SOCKET c) {
     return;
   }
   if (strcmp(path, "/__gpg__") == 0) {
-    char b[128];
+    char b[160];
     _snprintf(b, sizeof(b), "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n"
               "Cache-Control: no-store\r\nConnection: close\r\n\r\nGrandPixelGame %s",
-              GPG_VERSION);
+              g_srvVer);
     send_all(c, b, strlen(b));
     closesocket(c);
     return;
+  }
+  if (strcmp(path, "/__gpg_quit__") == 0) {
+    /* outra versão tomou a porta: avisa e encerra este processo */
+    const char *r = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok";
+    send_all(c, r, strlen(r));
+    closesocket(c);
+    g_serveStop = 1;
+    ExitProcess(0);
   }
   /* caminho: remove query, decode %20 simples */
   char clean[1024];
@@ -619,8 +647,43 @@ static void serve_client(SOCKET c) {
   char *q = strchr(clean, '?');
   if (q) *q = 0;
   if (strcmp(clean, "/") == 0) strcpy(clean, "/index.html");
-  const struct gpg_asset *a = find_asset(clean);
-  if (!a) {
+  /* conteúdo vem de disco quando instalado; senão do embutido no .exe */
+  const unsigned char *data = NULL;
+  unsigned long dlen = 0;
+  char diskPath[1200] = "";
+  const struct gpg_asset *a = NULL;
+  if (g_webRootA[0]) {
+    /* impede escape de diretório */
+    if (strstr(clean, "..") || strchr(clean, '\\')) {
+      const char *r = "HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+      send_all(c, r, strlen(r));
+      closesocket(c);
+      return;
+    }
+    _snprintf(diskPath, sizeof(diskPath), "%s%s", g_webRootA, clean);
+    FILE *f = fopen(diskPath, "rb");
+    if (f) {
+      fseek(f, 0, SEEK_END);
+      long fs = ftell(f);
+      rewind(f);
+      if (fs > 0 && fs < (8L << 20)) {
+        unsigned char *m = (unsigned char *)malloc((size_t)fs);
+        if (m && fread(m, 1, (size_t)fs, f) == (size_t)fs) { data = m; dlen = (unsigned long)fs; }
+        else free(m);
+      }
+      fclose(f);
+      if (!data) {
+        const char *r = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+        send_all(c, r, strlen(r));
+        closesocket(c);
+        return;
+      }
+    }
+  } else {
+    a = find_asset(clean);
+    if (a) { data = a->data; dlen = (unsigned long)a->size; }
+  }
+  if (!data) {
     const char *r = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n"
                     "Connection: close\r\n\r\n404";
     send_all(c, r, strlen(r));
@@ -629,11 +692,12 @@ static void serve_client(SOCKET c) {
   }
   char head[512];
   _snprintf(head, sizeof(head),
-            "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %u\r\n"
+            "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %lu\r\n"
             "Cache-Control: no-cache\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\n\r\n",
-            mime_of(clean), (unsigned)a->size);
+            mime_of(clean), dlen);
   send_all(c, head, strlen(head));
-  if (strcmp(method, "HEAD") != 0) send_all(c, (const char *)a->data, a->size);
+  if (strcmp(method, "HEAD") != 0) send_all(c, (const char *)data, dlen);
+  if (g_webRootA[0] && data) free((void *)data);
   closesocket(c);
 }
 static DWORD WINAPI server_loop(LPVOID arg) {
@@ -680,6 +744,44 @@ static void stop_server(void) {
   if (g_serveThread) { WaitForSingleObject(g_serveThread, 2000); g_serveThread = NULL; }
   WSACleanup();
 }
+/* envia pedido cru para o servidor local; 1 se conectou e enviou */
+static int http_local_raw(const char *request_path) {
+  SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (s == INVALID_SOCKET) return 0;
+  u_long blk = 1;
+  ioctlsocket(s, FIONBIO, &blk);
+  struct sockaddr_in sa;
+  memset(&sa, 0, sizeof(sa));
+  sa.sin_family = AF_INET;
+  sa.sin_port = htons(PORT_GAME);
+  sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  int ok = 0;
+  if (connect(s, (struct sockaddr *)&sa, sizeof(sa)) == 0 ||
+      WSAGetLastError() == WSAEWOULDBLOCK || WSAGetLastError() == WSAEINPROGRESS) {
+    fd_set wf;
+    FD_ZERO(&wf); FD_SET(s, &wf);
+    struct timeval tv = { 2, 0 };
+    if (select(0, NULL, &wf, NULL, &tv) > 0) {
+      int soerr = 0; int sl = sizeof(soerr);
+      getsockopt(s, SOL_SOCKET, SO_ERROR, (char *)&soerr, &sl);
+      if (soerr == 0) {
+        char req[320];
+        _snprintf(req, sizeof(req),
+                  "GET %s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+                  request_path);
+        send(s, req, (int)strlen(req), 0);
+        ok = 1;
+      }
+    }
+  }
+  closesocket(s);
+  return ok;
+}
+/* pede ao servidor de OUTRA versão que se encerre (libera a porta) */
+static void request_quit_server(void) {
+  http_local_raw("/__gpg_quit__");
+  Sleep(900);
+}
 /* checa versão do servidor que já estiver na porta (mesma/outra versão) */
 static int probe_server(char *ver, size_t cap) {
   SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -724,6 +826,26 @@ static int probe_server(char *ver, size_t cap) {
 }
 static void open_browser(void) {
   ShellExecuteW(NULL, L"open", L"http://127.0.0.1:8137/", NULL, NULL, SW_SHOWNORMAL);
+}
+/* janela própria (modo app) via Edge — cara de aplicativo de verdade */
+static int open_edge_app(void) {
+  const wchar_t *envs[2] = { L"ProgramFiles(x86)", L"ProgramFiles" };
+  for (int i = 0; i < 2; i++) {
+    wchar_t pf[1024];
+    DWORD n = GetEnvironmentVariableW(envs[i], pf, 1024);
+    if (n == 0 || n >= 1024) continue;
+    wchar_t edge[1100];
+    _snwprintf(edge, 1100, L"%s\\Microsoft\\Edge\\Application\\msedge.exe", pf);
+    if (GetFileAttributesW(edge) == INVALID_FILE_ATTRIBUTES) continue;
+    HINSTANCE r = ShellExecuteW(NULL, L"open", edge,
+                                L"--app=http://127.0.0.1:8137/ --window-size=1280,800",
+                                NULL, SW_SHOWNORMAL);
+    if ((INT_PTR)r > 32) return 1;
+  }
+  return 0;
+}
+static void open_game_window(void) {
+  if (!open_edge_app()) open_browser();
 }
 /* ============================================================
  * UI — launcher (janela principal) e player (janela do jogo)
@@ -949,14 +1071,18 @@ static void status_set(const wchar_t *s, int err) {
 }
 
 /* --------------------------- seleção / lista --------------------------- */
+static int ver_installed(const char *tag) {
+  int any = 0;
+  version_installed_dir(tag, NULL, 0, &any);
+  return any;
+}
 static void refresh_rows(void) {
   for (int i = 0; i < g_verCount; i++) {
     char full[24];
     _snprintf(full, sizeof(full), "v%s", GPG_VERSION);
     g_vers[i].current = strcmp(g_vers[i].tag, full) == 0;
-    g_vers[i].installed = 0;
+    g_vers[i].installed = ver_installed(g_vers[i].tag);
   }
-  find_installed();
   if (g_selIdx < 0 || g_selIdx >= g_verCount) {
     g_selIdx = 0;
     for (int i = 0; i < g_verCount; i++)
@@ -970,23 +1096,18 @@ static void select_row(int idx) {
   InvalidateRect(g_hwnd, NULL, FALSE);
 }
 
+static int g_autoPlayAfter = 0;   /* ao terminar download, já abre o jogo */
+
 /* ------------------------------ JOGAR / DL ------------------------------ */
-static void play_launcher(void) {
-  if (g_selIdx < 0 || g_selIdx >= g_verCount) return;
-  Ver *v = &g_vers[g_selIdx];
+/* inicia a versão selecionada num processo jogador (janela própria). */
+static void spawn_player(const char *tag) {
   wchar_t exe[MAX_PATH * 2];
-  if (v->current) {
-    GetModuleFileNameW(NULL, exe, MAX_PATH * 2);
-  } else if (v->installed) {
-    _snwprintf(exe, MAX_PATH * 2, L"%s\\versions\\GrandPixelGame-%hs-win64.exe",
-               g_appdirW, v->tag);
-  } else return;
-  if (GetFileAttributesW(exe) == INVALID_FILE_ATTRIBUTES) {
-    status_set(L"não achei o jogo instalado — baixe de novo.", 1);
-    return;
-  }
-  wchar_t cmd[MAX_PATH * 2 + 24];
-  _snwprintf(cmd, MAX_PATH * 2 + 24, L"\"%s\" --play", exe);
+  GetModuleFileNameW(NULL, exe, MAX_PATH * 2);
+  wchar_t cmd[MAX_PATH * 2 + 40];
+  if (tag && tag[0] && strcmp(tag, "v" GPG_VERSION) != 0)
+    _snwprintf(cmd, MAX_PATH * 2 + 40, L"\"%s\" --play --ver %hs", exe, tag);
+  else
+    _snwprintf(cmd, MAX_PATH * 2 + 40, L"\"%s\" --play", exe);
   STARTUPINFOW si;
   PROCESS_INFORMATION pi;
   memset(&si, 0, sizeof(si));
@@ -995,12 +1116,22 @@ static void play_launcher(void) {
   if (CreateProcessW(exe, cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
-    wchar_t st[220];
-    _snwprintf(st, 220, L"%hs iniciado — abrindo o navegador. Boa jornada!", v->tag);
-    status_set(st, 0);
   } else {
-    status_set(L"não consegui iniciar o jogo. Tente baixar a versão de novo.", 1);
+    wchar_t m[400];
+    _snwprintf(m, 400, L"Não consegui iniciar o jogo (erro %lu).\n"
+               L"Tente abrir o .exe direto ou baixar de novo.", GetLastError());
+    MessageBoxW(g_hwnd, m, L"Grand Pixel Game", MB_OK | MB_ICONERROR);
   }
+}
+static void play_launcher(void) {
+  if (g_selIdx < 0 || g_selIdx >= g_verCount) return;
+  Ver *v = &g_vers[g_selIdx];
+  if (!v->current && !v->installed) return;
+  spawn_player(v->tag);
+  wchar_t st[260];
+  _snwprintf(st, 260, L"abrindo %hs em janela própria — boa jornada!", v->tag);
+  status_set(st, 0);
+  ShowWindow(g_hwnd, SW_MINIMIZE);
 }
 
 /* ------------------------------ layout ------------------------------ */
@@ -1360,7 +1491,7 @@ static void player_paint(HDC hdc) {
               DT_LEFT | DT_SINGLELINE, 5, RGB(0, 0, 0), 2);
   {
     wchar_t v[70];
-    _snwprintf(v, 70, L"jogando  %hs", GPG_VERSION);
+    _snwprintf(v, 70, L"jogando  %hs", g_srvVer);
     text_w(hdc, v, 102, 74, PW - 140, 22, C_CYAN, g_f[FT_SMALLB], DT_LEFT | DT_SINGLELINE, 0);
   }
   text_w(hdc, L"servidor local ativo — o jogo roda no seu navegador",
@@ -1397,36 +1528,67 @@ static void player_paint(HDC hdc) {
   }
 }
 
+/* jogador: qual versão está rodando ("" = embutida neste exe) */
+static char g_runTag[24] = "";
+
 static LRESULT CALLBACK player_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
   switch (msg) {
     case WM_CREATE: {
       g_playerWnd = hwnd;
       g_hwnd = hwnd;
       player_layout();
+      /* conteúdo em disco quando for uma versão instalada */
+      if (g_runTag[0] && strcmp(g_runTag, "v" GPG_VERSION) != 0) {
+        wchar_t webW[MAX_PATH * 2];
+        int any = 0;
+        version_installed_dir(g_runTag, webW, MAX_PATH * 2, &any);
+        if (!any) {
+          MessageBoxW(hwnd,
+                      L"O conteúdo desta versão não está instalado.\n"
+                      L"Abra o launcher e clique em BAIXAR E INSTALAR.",
+                      L"Grand Pixel Game", MB_OK | MB_ICONINFORMATION);
+          DestroyWindow(hwnd);
+          return 0;
+        }
+        WideCharToMultiByte(CP_UTF8, 0, webW, -1, g_webRootA, sizeof(g_webRootA), NULL, NULL);
+        _snprintf(g_srvVer, sizeof(g_srvVer), "%s", g_runTag);
+      } else {
+        g_webRootA[0] = 0;
+        _snprintf(g_srvVer, sizeof(g_srvVer), "%s", GPG_VERSION);
+      }
+      /* inicia o servidor; se a porta estiver ocupada por OUTRA versão, toma a vez */
       if (!start_server()) {
         char other[48] = "";
         if (probe_server(other, sizeof(other))) {
-          if (strcmp(other, GPG_VERSION) == 0) {
-            open_browser();
+          if (strcmp(other, g_srvVer) == 0) {
+            /* já está rodando esta versão: só abre a janela do jogo */
+            open_game_window();
             DestroyWindow(hwnd);
+            return 0;
+          }
+          /* outra versão do jogo ocupa a porta: pede que ela saia */
+          request_quit_server();
+          if (start_server()) {
+            SetTimer(hwnd, 1, 700, NULL);
             return 0;
           }
         }
         MessageBoxW(hwnd,
-                    L"Não consegui iniciar o servidor local (porta 8137 ocupada).\n\n"
-                    L"Feche o outro Grand Pixel Game aberto e tente de novo.",
+                    L"Não consegui iniciar o servidor local (porta 8137 ocupada "
+                    L"por outro programa).\n\nFeche o programa que estiver usando "
+                    L"a porta 8137 e tente de novo.",
                     L"Grand Pixel Game", MB_OK | MB_ICONWARNING);
         DestroyWindow(hwnd);
         return 0;
       }
-      SetTimer(hwnd, 1, 600, NULL);
+      SetTimer(hwnd, 1, 700, NULL);
       return 0;
     }
     case WM_TIMER:
       if (wp == 1 && !g_openedBrowser) {
         g_openedBrowser = 1;
         KillTimer(hwnd, 1);
-        open_browser();
+        open_game_window();
       }
       return 0;
     case WM_ERASEBKGND: return 1;
@@ -1449,7 +1611,7 @@ static LRESULT CALLBACK player_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
       int id;
       if (btn_hit(x, y, &id)) {
         g_pressBtn = id;
-        if (id == B_OPEN) { open_browser(); return 0; }
+        if (id == B_OPEN) { open_game_window(); return 0; }
         if (id == B_PQUIT || id == B_CLOSE) { DestroyWindow(hwnd); return 0; }
       }
       return 0;
@@ -1607,16 +1769,22 @@ static LRESULT CALLBACK launcher_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM 
       if (wp) {
         int idx = find_ver(g_dlJob.tag);
         if (idx >= 0) {
-          g_vers[idx].installed = 1;
+          g_vers[idx].installed = ver_installed(g_dlJob.tag);
           g_selIdx = idx;
         }
         wchar_t st[240];
-        _snwprintf(st, 240, L"%hs instalado! É só apertar JOGAR.", g_dlJob.tag);
+        _snwprintf(st, 240, L"%hs instalado!", g_dlJob.tag);
         status_set(st, 0);
-      } else {
-        status_set(g_statusErr ? L"falha no download. Confira sua internet e tente de novo." :
-                   L"falha no download. Tente de novo.", 1);
+        InvalidateRect(hwnd, NULL, FALSE);
+        /* instalou por pedido do usuário (clique em JOGAR) → já abre o jogo */
+        if (g_autoPlayAfter) {
+          g_autoPlayAfter = 0;
+          play_launcher();
+        }
+        return 0;
       }
+      status_set(g_statusErr ? L"falha no download. Confira sua internet e tente de novo." :
+                 L"falha no download. Tente de novo.", 1);
       InvalidateRect(hwnd, NULL, FALSE);
       return 0;
     }
@@ -1641,7 +1809,8 @@ static LRESULT CALLBACK launcher_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM 
           if (v) {
             if (v->current || v->installed) play_launcher();
             else if (v->url[0] && !g_downloading) {
-              status_set(L"baixando e instalando…", 0);
+              g_autoPlayAfter = 1;
+              status_set(L"baixando e instalando… (já abre quando terminar)", 0);
               start_download(hwnd, g_selIdx);
               InvalidateRect(hwnd, NULL, FALSE);
             }
@@ -1711,7 +1880,10 @@ static LRESULT CALLBACK launcher_wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM 
         Ver *v = (g_selIdx >= 0) ? &g_vers[g_selIdx] : NULL;
         if (v) {
           if (v->current || v->installed) play_launcher();
-          else if (v->url[0] && !g_downloading) start_download(hwnd, g_selIdx);
+          else if (v->url[0] && !g_downloading) {
+            g_autoPlayAfter = 1;
+            start_download(hwnd, g_selIdx);
+          }
         }
         return 0;
       }
@@ -1747,13 +1919,43 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmd, int nShow) {
   int playMode = (wcsstr(lpCmd, L"--play") != NULL);
 
   /* nomes de classe estáticos: RegisterClass guarda o ponteiro */
-  static wchar_t clsLauncher[] = L"GPGLauncherWnd_v12";
-  static wchar_t clsPlayer[96];
+  static wchar_t clsLauncher[] = L"GPGLauncherWnd_v13";
+  static wchar_t clsPlayer[128];
+  static wchar_t mutexName[160];
+  HANDLE runMutex = NULL;
+
   if (playMode) {
-    char san[64];
-    version_san(san, sizeof(san), GPG_VERSION);
+    /* extrai a versão pedida: --play --ver v1.2.3 (ou --ver=v1.2.3) */
+    const wchar_t *vp = wcsstr(lpCmd, L"--ver");
+    if (vp) {
+      const wchar_t *val = vp + 4;
+      if (*val == L'=') val++;
+      else while (*val == L' ' || *val == L'\t') val++;
+      wchar_t tw[32];
+      int i = 0;
+      while (val[i] && val[i] != L' ' && val[i] != L'\t' && i < 31) { tw[i] = val[i]; i++; }
+      tw[i] = 0;
+      if (tw[0] == L'v') {
+        char ta[24];
+        WideCharToMultiByte(CP_UTF8, 0, tw, -1, ta, sizeof(ta), NULL, NULL);
+        _snprintf(g_runTag, sizeof(g_runTag), "%s", ta);
+      }
+    }
+    char san[40];
+    if (g_runTag[0]) version_san(san, sizeof(san), g_runTag);
+    else version_san(san, sizeof(san), "v" GPG_VERSION);
     MultiByteToWideChar(CP_UTF8, 0, san, -1, clsPlayer, 64);
     wcscat(clsPlayer, L"_GPGPlay");
+    _snwprintf(mutexName, 160, L"GrandPixelGame_Run_%hs", san);
+    runMutex = CreateMutexW(NULL, FALSE, mutexName);
+    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+      /* já existe um jogador desta versão rodando: foca e abre o jogo */
+      HWND ex = FindWindowW(clsPlayer, NULL);
+      if (ex) { ShowWindow(ex, SW_SHOW); SetForegroundWindow(ex); }
+      open_game_window();
+      return 0;
+    }
+    (void)runMutex; /* mantém o mutex até o processo sair */
   }
 
   WNDCLASSW wc;
@@ -1768,11 +1970,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmd, int nShow) {
   if (playMode) {
     wc.lpfnWndProc = player_wndproc;
     wc.lpszClassName = clsPlayer;
-    if (!RegisterClassW(&wc)) {
-      HWND ex = FindWindowW(clsPlayer, NULL);
-      if (ex) { ShowWindow(ex, SW_SHOW); SetForegroundWindow(ex); }
-      return 0;
-    }
+    RegisterClassW(&wc);
     RECT wa;
     SystemParametersInfoW(SPI_GETWORKAREA, 0, &wa, 0);
     int cx = wa.left + (wa.right - wa.left - PW) / 2;
@@ -1781,8 +1979,11 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmd, int nShow) {
                               WS_POPUP | WS_VISIBLE, cx, cy, PW, PH, NULL, NULL,
                               hInst, NULL);
     if (!hw) {
-      wchar_t m[300];
-      _snwprintf(m, 300, L"Não consegui abrir a janela do jogo (erro %lu).", GetLastError());
+      wchar_t m[400];
+      _snwprintf(m, 400,
+                 L"Não consegui abrir a janela do jogo (erro %lu).\n\n"
+                 L"Anote esse número e me avise — isso ajuda a corrigir.",
+                 GetLastError());
       MessageBoxW(NULL, m, L"Grand Pixel Game", MB_OK | MB_ICONERROR);
       return 1;
     }
@@ -1795,9 +1996,11 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmd, int nShow) {
                               WS_POPUP | WS_VISIBLE, cx, cy, W, H, NULL, NULL,
                               hInst, NULL);
     if (!hw) {
-      wchar_t m[300];
-      _snwprintf(m, 300, L"Não consegui abrir o launcher (erro %lu).\n\n"
-                 L"Se o problema continuar, baixe o .exe de novo.", GetLastError());
+      wchar_t m[400];
+      _snwprintf(m, 400,
+                 L"Não consegui abrir o launcher (erro %lu).\n\n"
+                 L"Anote esse número e me avise — isso ajuda a corrigir.",
+                 GetLastError());
       MessageBoxW(NULL, m, L"Grand Pixel Game", MB_OK | MB_ICONERROR);
       return 1;
     }
