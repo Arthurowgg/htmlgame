@@ -1,0 +1,134 @@
+# ============================================================================
+#  GitHub Actions workflow template for Launcher-Setup.exe
+#
+#  This file lives at .github/build-launcher.workflow.yml because some
+#  automation tokens cannot create files under .github/workflows/.
+#
+#  TO ACTIVATE (on github.com):
+#    1. Open this file → Edit (pencil)
+#    2. Change the path to:  .github/workflows/build-launcher.yml
+#    3. Commit
+#    4. Actions → "Build Launcher Setup (Windows)" → Run workflow
+#       or: git tag launcher-vX.Y.Z && git push origin launcher-vX.Y.Z
+#
+# ============================================================================
+name: Build Launcher Setup (Windows)
+
+on:
+  push:
+    tags:
+      - "launcher-v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing or new release tag (e.g. launcher-v3.2.0). Leave empty to only upload artifact."
+        required: false
+        default: ""
+      create_release:
+        description: "Create/update a GitHub Release and attach the exe"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Launcher-Setup.exe
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          architecture: x64
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller pillow
+          # tkinter ships with the official Windows Python on GitHub-hosted runners
+
+      - name: Build Launcher-Setup.exe
+        run: |
+          python setup/build_windows_setup.py
+          dir launcher\dist
+
+      - name: Verify exe exists
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "launcher\dist\Launcher-Setup.exe")) {
+            Write-Error "launcher/dist/Launcher-Setup.exe was not produced"
+            Get-ChildItem -Recurse launcher\dist | Format-Table
+            exit 1
+          }
+          Get-Item "launcher\dist\Launcher-Setup.exe" | Format-List Name, Length, FullName
+          if (Test-Path "launcher\dist\Launcher-Setup.exe.sha256") {
+            Get-Content "launcher\dist\Launcher-Setup.exe.sha256"
+          }
+
+      - name: Upload artifact (Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Launcher-Setup-windows
+          path: |
+            launcher/dist/Launcher-Setup.exe
+            launcher/dist/Launcher-Setup.exe.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] && [ -n "${GITHUB_REF_NAME}" ]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ inputs.release_tag }}" ]; then
+            echo "tag=${{ inputs.release_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            # manual run without tag: still build artifact only
+            echo "tag=" >> "$GITHUB_OUTPUT"
+          fi
+          echo "create=${{ github.event_name == 'push' || inputs.create_release }}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to GitHub Release
+        if: steps.tag.outputs.tag != '' && (github.event_name == 'push' || inputs.create_release == true || inputs.create_release == 'true')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Create release if it does not exist yet
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --title "Grand Pixel Game Launcher ${TAG#launcher-v}" \
+              --notes "$(cat <<'EOF'
+          ## Windows installer
+
+          1. Download **Launcher-Setup.exe** from Assets below
+          2. Double-click it
+          3. Click **Install Launcher**
+          4. Open the Launcher from the Desktop shortcut
+
+          No Python install, no terminal, no `git clone`.
+
+          The setup downloads the launcher package, installs an embedded Python runtime,
+          creates shortcuts, and can start the launcher when finished.
+          EOF
+          )"
+          fi
+          gh release upload "$TAG" \
+            "launcher/dist/Launcher-Setup.exe" \
+            --clobber
+          if [ -f "launcher/dist/Launcher-Setup.exe.sha256" ]; then
+            gh release upload "$TAG" \
+              "launcher/dist/Launcher-Setup.exe.sha256" \
+              --clobber || true
+          fi
+          gh release view "$TAG"

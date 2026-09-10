@@ -3,16 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#070b14">
-<title>Lumina Isle — Grand Pixel Game</title>
+<meta name="theme-color" content="#0a0e18">
+<title>Grand Pixel Game</title>
 <link rel="stylesheet" href="css/style.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect width='16' height='16' fill='%070b14'/><rect x='4' y='2' width='8' height='2' fill='%23e8b84a'/><rect x='3' y='4' width='10' height='6' fill='%23c47a3a'/><rect x='6' y='6' width='2' height='2' fill='%231a1008'/><rect x='9' y='6' width='2' height='2' fill='%231a1008'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect width='16' height='16' fill='%230a0e18'/><rect x='4' y='2' width='8' height='2' fill='%23e8b84a'/><rect x='3' y='4' width='10' height='6' fill='%23c47a3a'/><rect x='3' y='10' width='10' height='2' fill='%238a5a2a'/><rect x='6' y='6' width='2' height='2' fill='%231a1008'/><rect x='9' y='6' width='2' height='2' fill='%231a1008'/></svg>">
 </head>
 <body>
 <div id="game">
-  <div id="stage" tabindex="0">
+  <div id="stage">
     <canvas id="gl"></canvas>
     <canvas id="ui"></canvas>
+
     <div id="hud" class="hidden">
       <div class="hud tl">
         <div id="hearts" class="hearts"></div>
@@ -24,13 +25,18 @@
       </div>
       <div class="hud br">
         <button id="btn-map" class="icon-btn" title="Map (M)">MAP</button>
-        <button id="btn-inv" class="icon-btn" title="Inventory (I)">INV</button>
+        <button id="btn-log" class="icon-btn" title="Quests (Q)">QUESTS</button>
         <button id="pause-btn" class="icon-btn" title="Pause (Esc)">II</button>
       </div>
       <div id="banner" class="banner hidden"></div>
+      <div id="bossbar" class="boss hidden">
+        <div class="boss-name" id="bossname"></div>
+        <div class="boss-track"><div class="boss-fill" id="bossfill"></div></div>
+      </div>
       <div id="prompt" class="prompt hidden"></div>
       <div id="toast" class="toast hidden"></div>
-      <div class="hud bl hint">WASD move · mouse look (click) · F attack · E act · I inventory · M map · Esc pause</div>
+      <div class="hud bl hint" id="khint">WASD move · mouse look · E act · F/click attack · Space jump · Q quests · M map · Esc pause</div>
+
       <div id="touch" class="touch hidden">
         <div id="stick" class="stick"><div id="stick-knob" class="stick-knob"></div></div>
         <div class="touch-btns">
@@ -52,17 +58,17 @@
 
   <section class="screen" id="scr-title">
     <div class="panel center">
-      <div class="logo"><span>LUMINA</span><span>ISLE</span></div>
-      <div class="logo-sub">a 3D open island · cities · fog of war · inventory</div>
+      <div class="logo"><span>GRAND</span><span>PIXEL</span><span>GAME</span></div>
+      <div class="logo-sub">an island of light and shadow</div>
       <div class="ver" id="ver"></div>
       <div class="spacer"></div>
       <button class="btn primary" id="t-continue">Continue</button>
-      <button class="btn" id="t-new">New Expedition</button>
+      <button class="btn" id="t-new">New Journey</button>
       <button class="btn" id="t-howto">How to Play</button>
       <button class="btn" id="t-options">Options</button>
       <div class="spacer"></div>
       <button class="link" id="t-reset">erase save</button>
-      <div class="tiny">14 POIs · fog-of-war map · gather · combat · day/night · god rays</div>
+      <div class="tiny">18 story quests · 10 side quests · 10 artifacts · 3 bosses · 10 regions</div>
     </div>
   </section>
 
@@ -70,9 +76,12 @@
     <div class="panel center small">
       <h2>Paused</h2>
       <button class="btn" id="p-continue">Resume</button>
+      <button class="btn" id="p-quests">Quest Log</button>
       <button class="btn" id="p-map">Island Map</button>
-      <button class="btn" id="p-inv">Inventory</button>
+      <button class="btn" id="p-options">Options</button>
+      <button class="btn" id="p-howto">How to Play</button>
       <button class="btn" id="p-title">Title Screen</button>
+      <button class="link" id="p-reset">erase all progress</button>
     </div>
   </section>
 
@@ -83,18 +92,26 @@
         <div class="col">
           <h3>Controls</h3>
           <ul>
-            <li><b>WASD</b> — move (works immediately)</li>
-            <li><b>Click</b> — lock mouse look</li>
-            <li><b>RMB drag</b> — look without lock</li>
-            <li><b>Space</b> — jump · <b>Shift</b> sprint</li>
-            <li><b>F / Click</b> — attack</li>
+            <li><b>WASD</b> — move</li>
+            <li><b>Mouse</b> — look (click to lock)</li>
+            <li><b>Space</b> — jump</li>
+            <li><b>F / Left click</b> — attack</li>
             <li><b>E</b> — talk / gather</li>
-            <li><b>M</b> map · <b>I</b> inventory · <b>Esc</b> pause</li>
+            <li><b>M</b> — map · <b>Q</b> — quests</li>
+            <li><b>Esc</b> — pause</li>
+            <li><b>Shift</b> — sprint</li>
           </ul>
         </div>
         <div class="col">
-          <h3>Lumina Isle</h3>
-          <p>An original battle-royale-shaped island of cities, docks, neon streets, ruins and wilds. Discover POIs to lift the fog of war. Gather blooms, timber and prism shards. Sell at Sun Market. Survive the night.</p>
+          <h3>Goal</h3>
+          <p>Explore the island, complete the story quests, collect ten artifacts, and defeat three bosses to restore the Crown of Light.</p>
+          <h3>Tips</h3>
+          <ul>
+            <li>Talk to Elder Mira first.</li>
+            <li>Flowers grow in Sun Meadow — gather them for quests.</li>
+            <li>Hearts drop from foes; gold buys nothing yet but unlocks challenges.</li>
+            <li>Night falls slowly — shadows hit harder in the dark.</li>
+          </ul>
         </div>
       </div>
       <button class="btn primary" id="h-back">Back</button>
@@ -104,11 +121,13 @@
   <section class="screen hidden" id="scr-options">
     <div class="panel center small">
       <h2>Options</h2>
+      <label class="opt">SFX <input type="range" id="o-sfx" min="0" max="1" step="0.05"></label>
+      <label class="opt">Music <input type="range" id="o-music" min="0" max="1" step="0.05"></label>
       <label class="opt">Pixel scale
         <select id="o-scale">
-          <option value="1">Fine</option>
-          <option value="2" selected>Balanced</option>
-          <option value="3">Chunky</option>
+          <option value="1">Fine (1×)</option>
+          <option value="2">Balanced (2×)</option>
+          <option value="3">Chunky (3×)</option>
         </select>
       </label>
       <button class="btn primary" id="o-save">Save</button>
@@ -116,10 +135,17 @@
     </div>
   </section>
 
+  <section class="screen hidden" id="scr-quests">
+    <div class="panel wide">
+      <h2>Quest Log</h2>
+      <div id="quest-list" class="quest-list"></div>
+      <button class="btn primary" id="q-back">Back</button>
+    </div>
+  </section>
+
   <section class="screen hidden" id="scr-map">
     <div class="panel wide map-panel">
       <h2>Island Map</h2>
-      <p class="muted" style="margin-bottom:8px">Fog lifts as you discover cities and landmarks.</p>
       <div class="map-wrap">
         <canvas id="map-canvas"></canvas>
         <div id="map-legend" class="map-legend"></div>
@@ -128,20 +154,21 @@
     </div>
   </section>
 
-  <section class="screen hidden" id="scr-inv">
-    <div class="panel center">
-      <h2>Inventory</h2>
-      <div id="inv-list" class="inv-list"></div>
-      <button class="btn primary" id="i-back">Back</button>
+  <section class="screen hidden" id="scr-dead">
+    <div class="panel center small">
+      <h2>Fallen</h2>
+      <p class="muted">The island claims another traveler. Your progress is saved.</p>
+      <button class="btn primary" id="d-again">Rise again</button>
+      <button class="btn" id="d-title">Title Screen</button>
     </div>
   </section>
 
-  <section class="screen hidden" id="scr-dead">
-    <div class="panel center small">
-      <h2>Downed</h2>
-      <p class="muted">Progress is saved. Rise again at Haven Plaza.</p>
-      <button class="btn primary" id="d-again">Rise again</button>
-      <button class="btn" id="d-title">Title Screen</button>
+  <section class="screen hidden" id="scr-win">
+    <div class="panel center">
+      <h2>Legend Restored</h2>
+      <p class="muted">The Crown of Light returns to the shrine. The island remembers your name.</p>
+      <div class="tiny">Thank you for playing Grand Pixel Game</div>
+      <button class="btn primary" id="w-title">Title Screen</button>
     </div>
   </section>
 

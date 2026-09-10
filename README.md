@@ -1,85 +1,106 @@
-# Grand Pixel Game
+# Grand Pixel Game — Lumina Isle
 
-Ilha aberta em voxels, em pixel art, jogada no navegador — e um **launcher
-desktop para Windows** que baixa e abre cada versão direto do GitHub.
+3D open-island RPG + a **standalone pixel desktop launcher**.
 
-## ⬇ Baixar o executável (Windows, 1,7 MB)
+---
 
-[**Baixar o Grand Pixel Game Launcher (.exe)**](https://github.com/Arthurowgg/htmlgame/raw/refs/tags/launcher-v1.1.2/launcher/dist/GrandPixelGameLauncher-v1.1.2-win64.exe)
+## Install on Windows (recommended)
 
-Não precisa instalar nada, nem compilar nada: é um **.exe pronto**. Abra e o
-launcher lista as versões do jogo, baixa a que você escolher e abre o jogo numa
-janela própria.
+**You do not need Python, Git, or the terminal.**
 
-> As páginas de release também têm esse link no topo das notas — o botão
-> "Source code (zip)" que o GitHub gera é só o código, o jogo jogável é o
-> `.exe` acima.
->
-> SmartScreen pode pedir "Executar assim mesmo" porque o arquivo não tem
-> assinatura comercial.
+### Steps
 
-## Jogar sem baixar nada
+1. Open the latest **Launcher** release:  
+   [github.com/Arthurowgg/htmlgame/releases](https://github.com/Arthurowgg/htmlgame/releases)
+2. Under **Assets**, download **`Launcher-Setup.exe`**
+3. Double-click **`Launcher-Setup.exe`**
+4. Click **Install Launcher** and wait for it to finish
+5. Open **Grand Pixel Game Launcher** from the Desktop shortcut (or click **Open Launcher** in the setup)
+6. In the launcher: pick version **3.0.0** → **Install & Play**
+
+That’s the full install path for players.
+
+| | |
+|-|-|
+| Installer | `Launcher-Setup.exe` (GitHub Release → Assets) |
+| What it does | Downloads the launcher package, installs an embedded Python runtime, creates Desktop + Start Menu shortcuts |
+| After install | Double-click the Desktop shortcut anytime |
+
+> SmartScreen may say “Windows protected your PC” because the exe is not code-signed. Choose **More info** → **Run anyway**.
+
+---
+
+## Game (v3.0.0 — Lumina Isle)
+
+| | |
+|-|-|
+| World | Island with **14 POIs** (cities, docks, neon, ruins, peaks…) |
+| Map | Fog of war — discover places to reveal them |
+| Systems | Inventory, gather, combat, day/night, god-ray shaders |
+| Move | WASD · click to lock look · RMB drag look |
+
+### Controls
+- **WASD** move · **Shift** sprint · **Space** jump  
+- **Mouse** look (click lock, or hold right mouse)  
+- **F / click** attack · **E** talk / gather  
+- **M** map · **I** inventory · **Esc** pause  
+
+---
+
+## Developers
+
+Manual / CLI setup (not required for players):
 
 ```bash
-cd game && python3 -m http.server 8137     # abra http://localhost:8137
+git clone https://github.com/Arthurowgg/htmlgame.git
+cd htmlgame
+python3 -m venv .venv
+.venv/bin/pip install pygame pillow pywebview
+.venv/bin/python launcher/run.py
 ```
 
-## Como as versões funcionam
-
-Duas linhas independentes — e o launcher lê o GitHub sozinho, então um launcher
-antigo continua jogando lançamentos novos:
-
-| Linha | Tag | O que publica |
-|---|---|---|
-| Jogo (conteúdo) | `game-vX.Y.Z` | `game/dist/GrandPixelGame-vX.Y.Z-web.zip` |
-| Launcher (app) | `launcher-vX.Y.Z` | `launcher/dist/GrandPixelGameLauncher-vX.Y.Z-win64.exe` |
-
-- O jogo **nunca** vira `.exe`: é conteúdo (zip) que o launcher baixa e serve.
-- Downloads: o launcher procura primeiro o arquivo **anexado na release**
-  (Assets) e, se não houver, usa o arquivo versionado na árvore da tag — as
-  duas formas funcionam.
-- Instalação: `%LOCALAPPDATA%\GrandPixelGame\versions\<tag>\web`, registros em
-  `launcher.log` na mesma pasta, saves no navegador do jogo.
-
-## Publicar uma versão (para quem mantém)
+CLI installer (Linux/macOS or Windows with Python already installed):
 
 ```bash
-# jogo
-cd game && npm install --no-save jsdom && npm test
-python3 tools/pack.py                 # gera game/dist/GrandPixelGame-vX.Y.Z-web.zip
-git tag game-vX.Y.Z && git push origin game-vX.Y.Z
-
-# launcher
-cd launcher && g++ -std=c++17 -O1 -Isrc/core src/core/*.cpp tests/test_core.cpp -o /tmp/t && /tmp/t
-python3 build.py                      # gera launcher/dist/...-win64.exe
-git tag launcher-vX.Y.Z && git push origin launcher-vX.Y.Z
+python setup/GPG_Setup.py
 ```
 
-### Para o arquivo aparecer na seção **Assets** da release
+### Build `Launcher-Setup.exe` locally (Windows)
 
-O GitHub só aceita arquivos de release por um endereço de upload que algumas
-ferramentas automatizadas não alcançam. Há uma automação pronta no repositório
-que resolve isso de vez, rodando nos servidores do próprio GitHub:
-
-1. abra `.github/release-assets.workflow.yml`
-2. no site do GitHub, edite e troque o nome para
-   `.github/workflows/release-assets.yml` (é só mudar o campo do nome) e salve
-3. aba **Actions** → **Arquivos das releases** → **Run workflow**
-
-Pronto: essa execução anexa o `.exe` e o `.zip` de **todas** as releases
-(inclusive as antigas) e, de lá em diante, toda tag enviada ganha o arquivo
-automaticamente.
-
-Enquanto a automação não está ativa, também dá para anexar à mão: abra a
-release, arraste o arquivo baixado para **"Attach binaries"** e clique em
-**Update release**.
-
-## Estrutura
-
-```
-game/       o jogo (HTML/CSS/JS — WebGL puro, sem dependências)
-launcher/   o launcher Windows, em C++ (Win32), com testes nativos
-.github/    automação das releases
+```bat
+python -m pip install pyinstaller pillow
+python setup/build_windows_setup.py
+:: → launcher\dist\Launcher-Setup.exe
 ```
 
-Veja `game/README.md`, `launcher/README.md` e `CHANGELOG.md`.
+### CI / Releases (build `Launcher-Setup.exe` on GitHub)
+
+The Windows build workflow ships as a **ready-made file** (this environment cannot enable Actions workflows automatically):
+
+1. On GitHub, open [`.github/build-launcher.workflow.yml`](.github/build-launcher.workflow.yml)
+2. Click the pencil (**Edit**), rename the path to  
+   `.github/workflows/build-launcher.yml`  and commit
+3. **Actions** → **Build Launcher Setup (Windows)** → **Run workflow**  
+   or push a tag:
+
+```bash
+git tag launcher-v3.2.0
+git push origin launcher-v3.2.0
+```
+
+The job runs on `windows-latest`, builds **`Launcher-Setup.exe`**, and attaches it to the release **Assets**.
+
+### Layout
+
+```
+setup/
+  win_setup_gui.py          GUI installer (→ Launcher-Setup.exe)
+  win_setup_core.py         shared install logic
+  build_windows_setup.py    PyInstaller build script
+  GPG_Setup.py              CLI installer
+launcher/                   pixel desktop app (pygame)
+  dist/Launcher-Setup.exe   built installer (CI / local)
+game/                       Lumina Isle source
+versions/3.0.0/             shipped game build
+.github/workflows/build-launcher.yml
+```

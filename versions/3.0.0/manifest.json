@@ -1,0 +1,17 @@
+{
+  "id": "game-v3.0.0",
+  "version": "3.0.0",
+  "name": "Lumina Isle 3.0.0",
+  "entry": "index.html",
+  "files": [
+    "css/style.css",
+    "index.html",
+    "js/game.js",
+    "js/input.js",
+    "js/main.js",
+    "js/math.js",
+    "js/renderer.js",
+    "js/world.js"
+  ],
+  "type": "release"
+}
