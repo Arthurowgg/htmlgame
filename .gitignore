@@ -4,5 +4,9 @@ __pycache__/
 *.pdb
 .DS_Store
 .arena/
+.venv/
 launcher/gen/
+launcher/build_tmp/
+launcher/dist/GrandPixelGameLauncher
+launcher/dist/GrandPixelGameLauncher.exe
 versions/*.zip
