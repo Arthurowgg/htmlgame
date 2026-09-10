@@ -1,5 +1,5 @@
 """
-Shared Windows install logic for Grand Pixel Game Launcher.
+Shared Windows install logic for the OMNI CLASH launcher.
 
 Used by:
   - setup/GPG_Setup.py  (cross-platform CLI)
@@ -25,9 +25,9 @@ from typing import Callable, Optional
 
 REPO = "Arthurowgg/htmlgame"
 # Prefer the branch this session tracks; fall back to main/default on GitHub
-DEFAULT_BRANCH = "arena/01a08cbd-htmlgame"
-APP_NAME = "GrandPixelGame"
-SETUP_UA = "GPG-Launcher-Setup/1.0"
+DEFAULT_BRANCH = "main"
+APP_NAME = "OmniClash"
+SETUP_UA = "OmniClash-Setup/1.0"
 
 # Embeddable CPython (no user-facing Python install required)
 # Keep in sync with GitHub Actions matrix if bumped.
@@ -312,7 +312,7 @@ def write_windows_launchers(root: Path, py: Path, log: LogFn) -> Path:
         "\r\n".join(
             [
                 "@echo off",
-                "echo This removes the Grand Pixel Game Launcher install folder.",
+                "echo This removes the OMNI CLASH install folder.",
                 "echo Game saves in %LOCALAPPDATA%\\GrandPixelGame are kept.",
                 "pause",
                 'cd /d "%~dp0"',
@@ -334,7 +334,7 @@ def write_windows_launchers(root: Path, py: Path, log: LogFn) -> Path:
         if not desk.is_dir():
             desk = Path.home() / "OneDrive" / "Desktop"
         if desk.is_dir():
-            target = desk / "Grand Pixel Game Launcher.bat"
+            target = desk / "OMNI CLASH.bat"
             target.write_text(
                 f'@echo off\r\ncd /d "{root}"\r\n"{py}" -u launcher\\run.py\r\nif errorlevel 1 pause\r\n',
                 encoding="utf-8",
@@ -342,7 +342,7 @@ def write_windows_launchers(root: Path, py: Path, log: LogFn) -> Path:
             log(f"Desktop shortcut → {target}")
             # Real .lnk
             _make_lnk(
-                desk / "Grand Pixel Game Launcher.lnk",
+                desk / "OMNI CLASH.lnk",
                 str(py),
                 f'"{root / "launcher" / "run.py"}"',
                 str(root),
@@ -353,10 +353,10 @@ def write_windows_launchers(root: Path, py: Path, log: LogFn) -> Path:
 
     # Start Menu
     try:
-        sm = Path(os.environ.get("APPDATA", "")) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Grand Pixel Game"
+        sm = Path(os.environ.get("APPDATA", "")) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "OMNI CLASH"
         sm.mkdir(parents=True, exist_ok=True)
         _make_lnk(
-            sm / "Grand Pixel Game Launcher.lnk",
+            sm / "OMNI CLASH.lnk",
             str(py),
             f'"{root / "launcher" / "run.py"}"',
             str(root),
@@ -382,7 +382,7 @@ $s.TargetPath = '{target.replace("'", "''")}'
 $s.Arguments = '{args.replace("'", "''")}'
 $s.WorkingDirectory = '{workdir.replace("'", "''")}'
 $s.WindowStyle = 1
-$s.Description = 'Grand Pixel Game Launcher'
+$s.Description = 'OMNI CLASH'
 $s.Save()
 """
     try:
@@ -410,7 +410,7 @@ def write_install_meta(root: Path, py: Path):
     (root / "INSTALL_INFO.txt").write_text(
         "\n".join(
             [
-                "Grand Pixel Game Launcher",
+                "OMNI CLASH",
                 f"Install folder: {root}",
                 f"Python: {py}",
                 "",

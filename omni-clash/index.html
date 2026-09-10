@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OMNI CLASH — Marvel × DC Fan Fighter</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23e23636'/><text x='16' y='23' font-size='18' font-family='Impact' font-weight='bold' text-anchor='middle' fill='%23ffd42a'>O</text></svg>">
+</head>
+<body>
+
+<!-- ================= TITLE ================= -->
+<section id="screen-title" class="screen active">
+  <div class="halftone"></div>
+  <div class="title-wrap">
+    <div class="title-kicker">MARVEL × DC · FAN FIGHTER</div>
+    <h1 class="logo"><span class="l-omni">OMNI</span> <span class="l-clash">CLASH</span></h1>
+    <div class="title-sub">HEROES COLLIDE. ONLY ONE STANDS.</div>
+    <button id="btn-start" class="big-btn">▶ PRESS START</button>
+    <div class="title-hint">ENTER to start · M mute · Best played on desktop</div>
+    <div class="disclaimer">
+      Unofficial fan project made for fun. All character names belong to their
+      respective owners (Marvel / DC). No assets copied — every pixel here is
+      hand-drawn by code.
+    </div>
+    <div class="version-badge">v1.0.0</div>
+  </div>
+</section>
+
+<!-- ================= LOBBY / CHARACTER SELECT ================= -->
+<section id="screen-lobby" class="screen">
+  <div class="halftone"></div>
+  <header class="lobby-head">
+    <button id="btn-back-title" class="mini-btn">◄ TITLE</button>
+    <h2>CHOOSE YOUR FIGHTER</h2>
+    <div class="mode-box">
+      <div class="seg" id="seg-mode">
+        <button data-mode="cpu" class="on">1P vs CPU</button>
+        <button data-mode="2p">2 PLAYERS</button>
+      </div>
+      <div class="seg" id="seg-diff">
+        <button data-diff="rookie">ROOKIE</button>
+        <button data-diff="hero" class="on">HERO</button>
+        <button data-diff="legend">LEGEND</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="roster" class="roster"></div>
+
+  <div id="vsbar" class="vsbar">
+    <div class="vs-side" id="p1-slot"><span class="vs-label">P1</span><span class="vs-name">—</span></div>
+    <div class="vs-mid" id="vs-mid">VS</div>
+    <div class="vs-side right" id="p2-slot"><span class="vs-label">P2</span><span class="vs-name">CPU — ?</span></div>
+    <button id="btn-fight" class="big-btn" disabled>PICK A FIGHTER</button>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <footer class="lobby-foot">
+    <div><b>P1</b> A/D move · W jump · S block · <b>J</b> punch · <b>K</b> kick · <b>L</b> special</div>
+    <div><b>P2</b> ←/→ move · ↑ jump · ↓ block · <b>,</b> punch · <b>.</b> kick · <b>/</b> special</div>
+  </footer>
+</section>
+
+<!-- ================= FIGHT ================= -->
+<section id="screen-game" class="screen">
+  <div class="stage-frame">
+    <canvas id="game-canvas" width="960" height="540"></canvas>
+  </div>
+  <div class="game-foot">
+    <span>P / ESC pause · M mute</span>
+    <span id="stage-name"></span>
+    <span id="fight-round-indicator">BEST OF 3</span>
+  </div>
+</section>
+
+<script src="js/audio.js"></script>
+<script src="js/characters.js"></script>
+<script src="js/fighter.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/match.js"></script>
+<script src="js/lobby.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

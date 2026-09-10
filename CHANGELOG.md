@@ -1,5 +1,17 @@
 # Changelog
 
+## OMNI CLASH 1.0.0 — 2026-09-10
+
+- **Luta 1v1 no navegador**, 100% código: personagens, palcos, SFX e trilha desenhados/sintetizados em runtime (zero assets)
+- **Lobby** com 5 lutadores: SPIDER-MAN e BATMAN free; IRON MAN, WONDER WOMAN e JOKER bloqueados para 1.1
+- Especiais: Web Shot (stun), Batarang (bumerangue), Repulsor Blast, Shield Charge (investida), Joy Buzzer Bomb (granada)
+- Modos: 1P vs CPU (Rookie/Hero/Legend) e 2 players local; melhor de 3, rounds de 99s
+- 3 palcos procedurais: Neon New York, Wayne Manor, Themyscira Shore
+- Empacotado em `versions/omni-1.0.0/` (catalog.json: latest) + landing raiz rebrandada
+- Instalador rebrandado: **`OmniClash-Setup.exe`** (setup/ + launcher com marca OMNI)
+- Workflow de CI rebrandado: tags `omni-v*` → build Windows → asset na release
+- Fix de engine pego em teste headless: edge-trigger de input destruído no mesmo frame (ataques não sairiam pelo teclado)
+
 ## Launcher 3.2.0 — Windows Setup.exe
 
 - **`Launcher-Setup.exe`** — double-click Windows installer (no terminal, no system Python)

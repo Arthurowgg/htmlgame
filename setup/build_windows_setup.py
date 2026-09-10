@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build Launcher-Setup.exe with PyInstaller (run on Windows).
+Build OmniClash-Setup.exe with PyInstaller (run on Windows).
 
 Usage (from repo root, on Windows CI or a Windows machine):
 
@@ -8,7 +8,7 @@ Usage (from repo root, on Windows CI or a Windows machine):
     python setup/build_windows_setup.py
 
 Output:
-    launcher/dist/Launcher-Setup.exe
+    launcher/dist/OmniClash-Setup.exe
 """
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def main() -> int:
         return 1
 
     # Ensure setup is a package for hiddenimports
-    name = "Launcher-Setup"
+    name = "OmniClash-Setup"
     sep = ";" if sys.platform == "win32" else ":"
 
     # Include the whole setup package as data so frozen app can import it
@@ -86,12 +86,12 @@ def main() -> int:
     # PyInstaller may emit without extension on non-win
     if not produced.exists():
         # find anything matching
-        cands = list(DIST.glob("Launcher-Setup*"))
+        cands = list(DIST.glob("OmniClash-Setup*"))
         if cands:
             produced = cands[0]
 
     if produced.exists():
-        final = DIST / ("Launcher-Setup.exe" if sys.platform == "win32" else "Launcher-Setup")
+        final = DIST / ("OmniClash-Setup.exe" if sys.platform == "win32" else "OmniClash-Setup")
         if produced.resolve() != final.resolve():
             if final.exists():
                 final.unlink()

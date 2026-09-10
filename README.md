@@ -1,4 +1,29 @@
-# Grand Pixel Game — Lumina Isle
+# OMNI CLASH — Marvel × DC Fan Fighter
+
+> **v1.0.0** — lutinha 1v1 em navegador, 100% desenhada por código (nenhum
+> asset externo). Spider-Man e Batman liberados; Iron Man, Wonder Woman e
+> Joker chegam na 1.1. O legado Grand Pixel Game / Lumina Isle continua no
+> repo (abaixo).
+
+**Jogue agora:** abra [`versions/omni-1.0.0/`](versions/omni-1.0.0/) ·
+**Windows:** baixe `OmniClash-Setup.exe` nas
+[releases](https://github.com/Arthurowgg/htmlgame/releases)
+(compilado automaticamente pelo GitHub Actions).
+
+| | |
+|-|-|
+| Modos | 1P vs CPU (Rookie/Hero/Legend) · 2 players local · melhor de 3 |
+| Especiais | Web Shot · Batarang · Repulsor · Shield Charge · Joy Buzzer Bomb |
+| Palcos | Neon New York · Wayne Manor · Themyscira Shore (procedurais) |
+| Áudio | SFX + trilha 100% sintetizados (WebAudio) |
+| Código | [`omni-clash/`](omni-clash/) · docs em [`omni-clash/README.md`](omni-clash/README.md) |
+
+Projeto de fã, sem fins comerciais; nomes de personagens pertencem a
+Marvel/DC. Nenhum asset copiado.
+
+---
+
+# Legado: Grand Pixel Game — Lumina Isle
 
 3D open-island RPG + a **standalone pixel desktop launcher**.
 

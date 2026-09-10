@@ -7,7 +7,7 @@ SCALE = 3
 # Actually we draw on a low-res surface and blit scaled — classic pixel look.
 LOGICAL_W = 460
 LOGICAL_H = 280
-WINDOW_TITLE = "Grand Pixel Game Launcher"
+WINDOW_TITLE = "OMNI CLASH Launcher"
 
 # Palette — warm earth + gold accents
 C = {

@@ -1,7 +1,24 @@
 {
   "launcher": "3.2.0",
-  "updated": "2026-09-10T20:07:01Z",
+  "updated": "2026-09-10T21:54:15Z",
   "versions": [
+    {
+      "id": "omni-v1.0.0",
+      "version": "1.0.0",
+      "name": "OMNI CLASH 1.0.0",
+      "type": "release",
+      "date": "2026-09-10T21:54:15Z",
+      "path": "versions/omni-1.0.0/",
+      "size": 83652,
+      "changelog": [
+        "Marvel × DC fan fighter — browser, 100% code-drawn",
+        "Lobby with 5 fighters: Spider-Man & Batman free",
+        "Iron Man, Wonder Woman & Joker locked for 1.1",
+        "1P vs CPU (3 difficulties) + 2 players local",
+        "Best of 3, 3 procedural stages, synth audio"
+      ],
+      "latest": true
+    },
     {
       "id": "game-v3.0.0",
       "version": "3.0.0",
@@ -11,12 +28,12 @@
       "path": "versions/3.0.0/",
       "size": 85580,
       "changelog": [
-        "Lumina Isle \u2014 3D open island RPG",
+        "Lumina Isle — 3D open island RPG",
         "Fortnite-style POIs with fog-of-war map",
         "Fixed movement, inventory, god rays, day/night",
         "Cities: Haven, Market, Docks, Neon, Ironbluff..."
       ],
-      "latest": true
+      "latest": false
     },
     {
       "id": "game-v2.0.1",
