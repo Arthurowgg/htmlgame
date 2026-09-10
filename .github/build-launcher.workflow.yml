@@ -1,11 +1,17 @@
-# Build Windows Launcher-Setup.exe and attach it to a GitHub Release.
+# ============================================================================
+#  GitHub Actions workflow template for Launcher-Setup.exe
 #
-# Triggers:
-#   - push of tags launcher-v*  (preferred)
-#   - workflow_dispatch (manual) with optional tag input
+#  This file lives at .github/build-launcher.workflow.yml because some
+#  automation tokens cannot create files under .github/workflows/.
 #
-# Output asset name: Launcher-Setup.exe
-
+#  TO ACTIVATE (on github.com):
+#    1. Open this file → Edit (pencil)
+#    2. Change the path to:  .github/workflows/build-launcher.yml
+#    3. Commit
+#    4. Actions → "Build Launcher Setup (Windows)" → Run workflow
+#       or: git tag launcher-vX.Y.Z && git push origin launcher-vX.Y.Z
+#
+# ============================================================================
 name: Build Launcher Setup (Windows)
 
 on:

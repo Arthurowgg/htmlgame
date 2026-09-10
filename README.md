@@ -73,19 +73,22 @@ python setup/build_windows_setup.py
 :: → launcher\dist\Launcher-Setup.exe
 ```
 
-### CI / Releases
+### CI / Releases (build `Launcher-Setup.exe` on GitHub)
 
-Push a tag `launcher-vX.Y.Z` (or run the workflow manually):
+The Windows build workflow ships as a **ready-made file** (this environment cannot enable Actions workflows automatically):
 
-- Workflow: `.github/workflows/build-launcher.yml`
-- Runs on `windows-latest`
-- Uploads **`Launcher-Setup.exe`** to that release’s **Assets**
+1. On GitHub, open [`.github/build-launcher.workflow.yml`](.github/build-launcher.workflow.yml)
+2. Click the pencil (**Edit**), rename the path to  
+   `.github/workflows/build-launcher.yml`  and commit
+3. **Actions** → **Build Launcher Setup (Windows)** → **Run workflow**  
+   or push a tag:
 
 ```bash
 git tag launcher-v3.2.0
 git push origin launcher-v3.2.0
-# Actions builds and attaches Launcher-Setup.exe
 ```
+
+The job runs on `windows-latest`, builds **`Launcher-Setup.exe`**, and attaches it to the release **Assets**.
 
 ### Layout
 

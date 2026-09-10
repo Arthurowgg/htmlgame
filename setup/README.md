@@ -28,7 +28,7 @@ python setup/build_windows_setup.py
 :: output: launcher\dist\Launcher-Setup.exe
 ```
 
-GitHub Actions (`.github/workflows/build-launcher.yml`) builds on every `launcher-v*` tag and attaches the exe to the release.
+GitHub Actions template: `.github/build-launcher.workflow.yml` — rename to `.github/workflows/build-launcher.yml` on GitHub (Edit → change path) to enable. Then every `launcher-v*` tag builds and attaches `Launcher-Setup.exe`.
 
 ## CLI (dev / Linux / macOS)
 
