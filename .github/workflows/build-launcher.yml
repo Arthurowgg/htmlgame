@@ -77,6 +77,37 @@ jobs:
             ls -la launcher/dist 2>/dev/null || echo "(missing)"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Report build log to issue (failure)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          {
+            echo "### :x: OmniClash-Setup build failed on \`${GITHUB_REF_NAME}\` (run ${GITHUB_RUN_ID})"
+            echo ""
+            echo '```text'
+            tail -n 120 build.log 2>/dev/null || echo "(no build.log captured)"
+            echo '```'
+            echo ""
+            echo "<details><summary>launcher/dist</summary>"
+            echo ""
+            echo '```text'
+            ls -la launcher/dist 2>/dev/null || echo "(missing)"
+            echo '```'
+            echo ""
+            echo "</details>"
+          } > issue-body.md
+          ISSUE=$(gh issue list --repo "${GITHUB_REPOSITORY}" --search "OMNI CLASH CI build log in:title" --state open --json number --jq '.[0].number // ""')
+          if [ -z "$ISSUE" ]; then
+            ISSUE=$(gh issue create --repo "${GITHUB_REPOSITORY}" \
+              --title "OMNI CLASH CI build log" \
+              --body "Arquivo automático de logs de build do OmniClash-Setup." \
+              --json number --jq '.number')
+          fi
+          gh issue comment "$ISSUE" --repo "${GITHUB_REPOSITORY}" --body-file issue-body.md
+          echo "posted to issue #$ISSUE"
+
       - name: Verify exe exists
         shell: pwsh
         run: |
