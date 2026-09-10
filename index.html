@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b0e14">
+<title>Grand Pixel Game — Launcher</title>
+<link rel="stylesheet" href="launcher/css/launcher.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' shape-rendering='crispEdges'><rect width='32' height='32' fill='%230b0e14'/><rect x='6' y='4' width='20' height='4' fill='%23e8b84a'/><rect x='4' y='8' width='24' height='14' fill='%23c47a3a'/><rect x='8' y='12' width='4' height='4' fill='%231a1008'/><rect x='20' y='12' width='4' height='4' fill='%231a1008'/><rect x='10' y='20' width='12' height='4' fill='%238a5a2a'/><rect x='12' y='24' width='8' height='4' fill='%236b4420'/></svg>">
+</head>
+<body>
+<div id="app">
+  <!-- top bar -->
+  <header id="topbar">
+    <div class="brand">
+      <div class="brand-icon" aria-hidden="true"></div>
+      <div class="brand-text">
+        <strong>GRAND PIXEL GAME</strong>
+        <span>Launcher</span>
+      </div>
+    </div>
+    <nav id="tabs" role="tablist">
+      <button class="tab active" data-tab="play" role="tab">Play</button>
+      <button class="tab" data-tab="installations" role="tab">Installations</button>
+      <button class="tab" data-tab="skins" role="tab">Profile</button>
+      <button class="tab" data-tab="settings" role="tab">Settings</button>
+    </nav>
+    <div class="top-right">
+      <div id="online-dot" class="online" title="Online"></div>
+      <div id="user-chip">
+        <div class="avatar" id="avatar"></div>
+        <span id="username">Player</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- ========== PLAY ========== -->
+    <section class="view active" id="view-play">
+      <div class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+          <div class="hero-badge">OPEN WORLD · VOXEL · PIXEL</div>
+          <h1>Grand Pixel Game</h1>
+          <p class="hero-sub">An island of light and shadow. Explore, fight, collect artifacts, and uncover the legend.</p>
+          <div class="hero-stats">
+            <div><b id="stat-versions">—</b><span>Versions</span></div>
+            <div><b id="stat-installed">—</b><span>Installed</span></div>
+            <div><b id="stat-size">—</b><span>Library</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="play-row">
+        <aside class="news-panel">
+          <h3>News & Updates</h3>
+          <div id="news-list"></div>
+        </aside>
+
+        <div class="play-panel">
+          <div class="version-select-card">
+            <label for="version-select">VERSION</label>
+            <div class="select-wrap">
+              <select id="version-select"></select>
+              <div class="select-meta" id="select-meta">Loading versions…</div>
+            </div>
+            <div class="version-tags" id="version-tags"></div>
+          </div>
+
+          <div class="install-progress hidden" id="install-progress">
+            <div class="prog-head">
+              <span id="prog-label">Installing…</span>
+              <span id="prog-pct">0%</span>
+            </div>
+            <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+            <div class="prog-detail" id="prog-detail"></div>
+          </div>
+
+          <div class="play-actions">
+            <button id="btn-play" class="btn-play" disabled>
+              <span class="btn-play-icon">▶</span>
+              <span class="btn-play-text">
+                <strong id="btn-play-label">PLAY</strong>
+                <small id="btn-play-sub">Select a version</small>
+              </span>
+            </button>
+            <button id="btn-install" class="btn-secondary" disabled>Install</button>
+            <button id="btn-uninstall" class="btn-ghost hidden">Uninstall</button>
+          </div>
+
+          <div class="quick-info" id="quick-info"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== INSTALLATIONS ========== -->
+    <section class="view" id="view-installations">
+      <div class="page-head">
+        <h2>Installations</h2>
+        <p>Manage installed game versions. Installed builds are cached in your browser for offline play.</p>
+        <div class="page-actions">
+          <button class="btn-secondary" id="btn-refresh">Refresh catalog</button>
+          <button class="btn-ghost" id="btn-clear-cache">Clear all installs</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="inst-table" id="inst-table">
+          <thead>
+            <tr>
+              <th>Version</th>
+              <th>Type</th>
+              <th>Released</th>
+              <th>Status</th>
+              <th>Size</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="inst-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== PROFILE ========== -->
+    <section class="view" id="view-skins">
+      <div class="page-head">
+        <h2>Profile</h2>
+        <p>Your local player identity. Saved on this device.</p>
+      </div>
+      <div class="profile-grid">
+        <div class="profile-card">
+          <div class="big-avatar" id="big-avatar"></div>
+          <label>Display name</label>
+          <input id="name-input" maxlength="16" placeholder="Player" autocomplete="off">
+          <label>Skin color</label>
+          <div class="swatches" id="swatches"></div>
+          <button class="btn-secondary" id="btn-save-profile">Save profile</button>
+        </div>
+        <div class="profile-card stats-card">
+          <h3>Local stats</h3>
+          <div class="stat-rows" id="local-stats"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== SETTINGS ========== -->
+    <section class="view" id="view-settings">
+      <div class="page-head">
+        <h2>Settings</h2>
+      </div>
+      <div class="settings-grid">
+        <div class="set-card">
+          <h3>Launcher</h3>
+          <label class="check"><input type="checkbox" id="set-anim" checked> Animated backgrounds</label>
+          <label class="check"><input type="checkbox" id="set-sound" checked> UI sounds</label>
+          <label class="check"><input type="checkbox" id="set-auto" checked> Auto-select latest release</label>
+          <label>Language
+            <select id="set-lang">
+              <option value="en">English</option>
+              <option value="pt">Português</option>
+            </select>
+          </label>
+        </div>
+        <div class="set-card">
+          <h3>Game defaults</h3>
+          <label>Render scale
+            <select id="set-scale">
+              <option value="1">Performance</option>
+              <option value="2" selected>Balanced</option>
+              <option value="3">Quality</option>
+            </select>
+          </label>
+          <label>Default difficulty
+            <select id="set-diff">
+              <option value="easy">Easy</option>
+              <option value="normal" selected>Normal</option>
+              <option value="hard">Hard</option>
+            </select>
+          </label>
+          <button class="btn-secondary" id="btn-save-settings">Save settings</button>
+        </div>
+        <div class="set-card">
+          <h3>About</h3>
+          <p class="muted">Grand Pixel Game Launcher <b id="launcher-ver">2.0.0</b></p>
+          <p class="muted">Repository: <a href="https://github.com/Arthurowgg/htmlgame" target="_blank" rel="noopener">Arthurowgg/htmlgame</a></p>
+          <p class="muted">WebGL voxel adventure · no install required beyond the browser cache.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="bottombar">
+    <div class="bb-left">
+      <span id="status-text">Ready</span>
+    </div>
+    <div class="bb-right">
+      <span id="bb-ver">launcher 2.0.0</span>
+    </div>
+  </footer>
+</div>
+
+<!-- launch overlay (game iframe) -->
+<div id="game-overlay" class="hidden">
+  <div class="game-bar">
+    <div class="game-bar-left">
+      <button id="btn-back" title="Back to launcher">← Launcher</button>
+      <span id="game-title">Grand Pixel Game</span>
+    </div>
+    <div class="game-bar-right">
+      <button id="btn-fullscreen" title="Fullscreen">⛶</button>
+      <button id="btn-reload-game" title="Reload">↻</button>
+    </div>
+  </div>
+  <iframe id="game-frame" title="Grand Pixel Game" allow="autoplay; fullscreen; gamepad"></iframe>
+</div>
+
+<script type="module" src="launcher/js/launcher.js"></script>
+</body>
+</html>

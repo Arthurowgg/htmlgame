@@ -18,7 +18,7 @@ function readLauncherCfg() {
   return {};
 }
 const LAUNCHER_CFG = readLauncherCfg();
-const VERSION = LAUNCHER_CFG.version || '2.0.0';
+const VERSION = LAUNCHER_CFG.version || '2.0.1';
 
 const cfg = loadCfg();
 if (LAUNCHER_CFG.scale) cfg.scale = Number(LAUNCHER_CFG.scale) || cfg.scale;

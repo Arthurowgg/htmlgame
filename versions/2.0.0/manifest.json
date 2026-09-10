@@ -1,0 +1,19 @@
+{
+  "id": "game-v2.0.0",
+  "version": "2.0.0",
+  "name": "Grand Pixel Game 2.0.0",
+  "entry": "index.html",
+  "files": [
+    "css/style.css",
+    "index.html",
+    "js/audio.js",
+    "js/entities.js",
+    "js/input.js",
+    "js/main.js",
+    "js/math.js",
+    "js/renderer.js",
+    "js/save.js",
+    "js/world.js"
+  ],
+  "type": "release"
+}
