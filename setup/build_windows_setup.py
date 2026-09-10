@@ -96,7 +96,7 @@ def main() -> int:
             if final.exists():
                 final.unlink()
             produced.replace(final)
-        print(f"OK → {final} ({final.stat().st_size} bytes)")
+        print(f"OK -> {final} ({final.stat().st_size} bytes)")
         # write a small sha256 sidecar for release notes
         try:
             import hashlib
