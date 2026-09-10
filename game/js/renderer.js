@@ -503,11 +503,27 @@ export class SpriteAtlas {
 }
 
 export class Renderer {
-  constructor(canvas, world) {
+  constructor(canvas, world, opts) {
     this.canvas = canvas;
     this.world = world;
-    const gl = this.gl = canvas.getContext('webgl', { antialias: true, alpha: false, depth: true, powerPreference: 'high-performance' });
-    if (!gl) throw new Error('WebGL indisponível');
+    this.glowsOn = true;
+    const o = opts || {};
+    // várias tentativas: quanto mais conservador, mais chance de abrir
+    const tries = [
+      { antialias: o.antialias !== false, alpha: false, depth: true, powerPreference: 'high-performance' },
+      { antialias: false, alpha: false, depth: true },
+      { antialias: false, alpha: false, depth: true, failIfMajorPerformanceCaveat: false },
+    ];
+    let gl = null, why = '';
+    for (const at of tries) {
+      try { gl = canvas.getContext('webgl', at) || canvas.getContext('experimental-webgl', at); } catch (e) { why = e.message; }
+      if (gl) break;
+    }
+    this.gl = gl;
+    if (!gl) {
+      throw new Error('o navegador não liberou o WebGL' + (why ? ' (' + why + ')' : '') +
+        ' — driver de vídeo antigo ou aceleração desligada');
+    }
     this.pTer = compile(gl, VS_TER, FS_TER);
     this.pSpr = compile(gl, VS_SPR, FS_SPR);
     this.pGlow = compile(gl, VS_GLOW, FS_GLOW);

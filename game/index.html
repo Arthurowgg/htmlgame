@@ -3,62 +3,56 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0b0a14">
+<meta name="theme-color" content="#0a0912">
 <title>Grand Pixel Game</title>
 <link rel="stylesheet" href="css/style.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%230b0a14'/><path d='M8 2 L10 6 L14 6 L11 9 L12 13 L8 10.5 L4 13 L5 9 L2 6 L6 6 Z' fill='%23ffd76a'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect width='16' height='16' fill='%230a0912'/><rect x='4' y='2' width='8' height='2' fill='%23ffd76a'/><rect x='3' y='4' width='10' height='6' fill='%23ffb35c'/><rect x='3' y='10' width='10' height='2' fill='%23b5702f'/><rect x='6' y='6' width='2' height='2' fill='%23241406'/><rect x='9' y='6' width='2' height='2' fill='%23241406'/></svg>">
 </head>
 <body>
 <div id="game">
 
-  <!-- mundo -->
-  <canvas id="gl"></canvas>
-  <canvas id="ui"></canvas>
+  <!-- ============ tela do jogo (baixa resolução, ampliada sem suavização) ============ -->
+  <div id="stage">
+    <canvas id="gl"></canvas>
+    <canvas id="ui"></canvas>
 
-  <!-- carga inicial -->
-  <div id="loading">
-    <div class="ld-wrap">
-      <div class="ld-star">✧</div>
-      <div class="ld-txt">acendendo o mundo…</div>
-    </div>
-  </div>
-
-  <!-- HUD em jogo -->
-  <div id="hud" class="hidden">
-    <div class="hud tl">
-      <div id="hearts" class="hearts"></div>
-      <div id="arts" class="arts"></div>
-      <div id="obj" class="obj hidden">
-        <div id="objtxt" class="objtxt"></div>
-        <div id="objp" class="objp"></div>
+    <!-- HUD em jogo -->
+    <div id="hud" class="hidden">
+      <div class="hud tl">
+        <div id="hearts" class="hearts"></div>
+        <div id="arts" class="arts"></div>
+        <div id="obj" class="obj hidden">
+          <div id="objtxt" class="objtxt"></div>
+          <div id="objp" class="objp"></div>
+        </div>
       </div>
-    </div>
-    <div class="hud tr">
-      <canvas id="mini" width="132" height="132"></canvas>
-      <button id="btn-log" class="icon-btn" title="Diário (Q)">✦</button>
-      <button id="pause-btn" class="icon-btn hidden" title="Pausa (Esc)">❚❚</button>
-    </div>
-    <div id="banner" class="banner hidden"></div>
-    <div id="bossbar" class="boss hidden">
-      <div class="boss-name" id="bossname"></div>
-      <div class="boss-track"><div class="boss-fill" id="bossfill"></div></div>
-    </div>
-    <div id="prompt" class="prompt hidden"></div>
-    <div id="toast" class="toast hidden"></div>
-    <div class="hud br hint" id="khint">WASD mover · E agir · F/J atacar · Espaço pular · Q diário · M som · Esc pausa</div>
+      <div class="hud br">
+        <button id="btn-map" class="icon-btn" title="Mapa da ilha (M)">MAPA</button>
+        <button id="btn-log" class="icon-btn" title="Diário (Q)">DIARIO</button>
+        <button id="pause-btn" class="icon-btn hidden" title="Pausa (Esc)">II</button>
+      </div>
+      <div id="banner" class="banner hidden"></div>
+      <div id="bossbar" class="boss hidden">
+        <div class="boss-name" id="bossname"></div>
+        <div class="boss-track"><div class="boss-fill" id="bossfill"></div></div>
+      </div>
+      <div id="prompt" class="prompt hidden"></div>
+      <div id="toast" class="toast hidden"></div>
+      <div class="hud bl hint" id="khint">WASD andar · E agir · F/J atacar · Espaco pular · Q diario · M mapa · Esc pausa</div>
 
-    <!-- toque -->
-    <div id="touch" class="touch hidden">
-      <div id="stick" class="stick"><div id="stick-knob" class="stick-knob"></div></div>
-      <div class="touch-btns">
-        <button id="btn-jump" class="tbtn">▲</button>
-        <button id="btn-atk" class="tbtn">⚔</button>
-        <button id="btn-act" class="tbtn">E</button>
+      <!-- toque -->
+      <div id="touch" class="touch hidden">
+        <div id="stick" class="stick"><div id="stick-knob" class="stick-knob"></div></div>
+        <div class="touch-btns">
+          <button id="btn-jump" class="tbtn">▲</button>
+          <button id="btn-atk" class="tbtn">⚔</button>
+          <button id="btn-act" class="tbtn">E</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- diálogo -->
+  <!-- ============ diálogo ============ -->
   <div id="dlg" class="hidden">
     <div class="dlg-inner">
       <div id="dlg-name" class="dlg-name"></div>
@@ -67,11 +61,11 @@
     </div>
   </div>
 
-  <!-- telas -->
+  <!-- ============ telas ============ -->
   <section class="screen" id="scr-title">
     <div class="panel center">
-      <div class="logo">GRAND PIXEL GAME</div>
-      <div class="logo-sub">uma aventura 3D em mundo aberto</div>
+      <div class="logo"><span>GRAND</span><span>PIXEL</span><span>GAME</span></div>
+      <div class="logo-sub">uma ilha, uma lenda, setenta missões</div>
       <div class="ver" id="ver"></div>
       <div class="spacer"></div>
       <button class="btn primary" id="t-continue">Continuar</button>
@@ -79,8 +73,8 @@
       <button class="btn" id="t-howto">Como Jogar</button>
       <button class="btn" id="t-options">Opções</button>
       <div class="spacer"></div>
-      <button class="link" id="t-reset">✕ zerar progresso</button>
-      <div class="tiny">70 missões · 10 artefatos · um vale para salvar</div>
+      <button class="link" id="t-reset">zerar progresso</button>
+      <div class="tiny">70 missões · 10 artefatos · 3 chefes · 10 regiões</div>
     </div>
   </section>
 
@@ -89,11 +83,12 @@
       <h2>Pausa</h2>
       <button class="btn" id="p-continue">Continuar</button>
       <button class="btn" id="p-log">Diário de Missões</button>
+      <button class="btn" id="p-map">Mapa da Ilha</button>
       <button class="btn" id="p-stats">Registro de Jornada</button>
       <button class="btn" id="p-options">Opções</button>
       <button class="btn" id="p-howto">Como Jogar</button>
       <button class="btn" id="p-title">Tela Inicial</button>
-      <button class="link" id="p-reset">✕ zerar todo o progresso</button>
+      <button class="link" id="p-reset">zerar todo o progresso</button>
     </div>
   </section>
 
@@ -109,20 +104,23 @@
             <tr><td><kbd>Espaço</kbd></td><td>pular (2× com as Botas Aladas)</td></tr>
             <tr><td><kbd>F</kbd> / <kbd>J</kbd> / clique</td><td>atacar</td></tr>
             <tr><td><kbd>Q</kbd></td><td>diário de missões</td></tr>
-            <tr><td><kbd>M</kbd></td><td>som liga/desliga</td></tr>
+            <tr><td><kbd>M</kbd></td><td>mapa da ilha</td></tr>
+            <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>zoom do minimapa</td></tr>
+            <tr><td><kbd>N</kbd></td><td>som liga/desliga</td></tr>
             <tr><td><kbd>Esc</kbd></td><td>pausa</td></tr>
           </table>
           <p class="note">No celular, use o analógico à esquerda e os botões à direita.</p>
         </div>
         <div class="col">
-          <h3>O vale</h3>
+          <h3>A ilha</h3>
           <ul class="tips">
             <li>O selo da praça desperta com <b>cristais</b> do Campo Radiante.</li>
             <li>A Clareira das Lágrimas guarda as <b>flores de luz</b> que Mira procura.</li>
-            <li>Slimes e wisps rondam o vale — cada região tem seus guardiões.</li>
+            <li>Slimes e wisps rondam a ilha — cada região tem seus guardiões.</li>
             <li>Baús trancados escondem <b>artefatos míticos</b>. Volte quando estiver mais forte.</li>
-            <li>O mar no nordeste esconde uma ilha… e a <b>Cripta Esquecida</b> espera no sudoeste.</li>
+            <li>O mar a nordeste esconde o Recife; a Cripta Esquecida dorme a sudoeste.</li>
             <li>Fale com Ori, Mira e Kael para avançar na história.</li>
+            <li>No mapa, cada ponto tem seu ícone: casas, torres, portos, cavernas e ruínas.</li>
           </ul>
         </div>
       </div>
@@ -142,9 +140,9 @@
         <input type="range" id="o-sfx" min="0" max="1" step="0.05" value="0.8">
       </div>
       <div class="row">
-        <span>Qualidade</span>
+        <span>Pixels</span>
         <div class="seg" id="o-qual">
-          <button data-q="0">Baixa</button><button data-q="1" class="on">Média</button><button data-q="2">Alta</button>
+          <button data-q="0">Grossos</button><button data-q="1" class="on">Médios</button><button data-q="2">Finos</button>
         </div>
       </div>
       <button class="btn" id="o-back">Voltar</button>
@@ -159,12 +157,33 @@
     </div>
   </section>
 
+  <section class="screen" id="scr-map">
+    <div class="panel map-panel">
+      <div class="log-head">
+        <h2>Mapa da Ilha</h2>
+        <span id="map-sub" class="log-progress"></span>
+        <button class="icon-btn x" id="map-close">X</button>
+      </div>
+      <div class="map-body">
+        <canvas id="bigmap" width="420" height="420"></canvas>
+        <div class="map-side" id="map-side"></div>
+      </div>
+      <div class="map-foot">
+        <div class="seg" id="map-legend">
+          <button data-l="0" class="on">Terreno</button><button data-l="1">Pontos</button><button data-l="2">Missões</button>
+        </div>
+        <span class="tiny">clique num ponto para marcar como destino</span>
+        <button class="btn mini" id="map-back">Voltar</button>
+      </div>
+    </div>
+  </section>
+
   <section class="screen" id="scr-log">
     <div class="panel log">
       <div class="log-head">
         <h2>Diário de Missões</h2>
         <span id="log-progress" class="log-progress"></span>
-        <button class="icon-btn x" id="log-close">✕</button>
+        <button class="icon-btn x" id="log-close">X</button>
       </div>
       <div class="tabs">
         <button class="tab on" data-tab="hist">História</button>
@@ -187,7 +206,109 @@
     </div>
   </div>
 
+  <!-- ============ carga e falhas ============ -->
+  <div id="loading">
+    <div class="ld-wrap">
+      <div class="ld-logo"><span>GRAND</span><span>PIXEL</span><span>GAME</span></div>
+      <div class="ld-bar"><div id="ld-fill" class="ld-fill"></div></div>
+      <div class="ld-txt" id="ld-txt">acendendo o mundo…</div>
+      <div class="ld-hint" id="ld-hint">dica: [ e ] mudam o zoom do minimapa</div>
+    </div>
+  </div>
+
+  <div id="crash" class="hidden">
+    <div class="panel center wide">
+      <h2 id="crash-title">Ops — o jogo não conseguiu abrir</h2>
+      <p id="crash-text" class="crash-text"></p>
+      <pre id="crash-detail" class="crash-detail"></pre>
+      <div class="row center">
+        <button class="btn primary" id="crash-retry">Tentar de novo</button>
+        <button class="btn" id="crash-compat">Modo compatibilidade</button>
+        <button class="btn" id="crash-copy">Copiar detalhes</button>
+      </div>
+      <p class="tiny" id="crash-tip">Se continuar, abra o jogo no navegador (Chrome/Edge) e tente de novo.</p>
+    </div>
+  </div>
+
 </div>
+
+<script>
+// Vigia de carga: se o jogo não terminar de abrir, o jogador vê o motivo em
+// vez de uma tela girando para sempre. Roda sem módulos, então funciona até
+// quando o próprio main.js não carrega.
+(function () {
+  var steps = [
+    ['iniciando…', 6],
+    ['lendo o mundo…', 22],
+    ['levantando o terreno…', 42],
+    ['pintando os blocos…', 60],
+    ['acendendo a luz…', 78],
+    ['abrindo a ilha…', 92],
+    ['pronto', 100],
+  ];
+  var idx = 0, booted = false, failed = false, t0 = Date.now();
+
+  window.__gpgStep = function (i, txt) {
+    if (failed) return;
+    if (typeof i === 'number' && steps[i]) idx = i;
+    var f = document.getElementById('ld-fill'), t = document.getElementById('ld-txt');
+    if (f) f.style.width = steps[idx][1] + '%';
+    if (t && txt) t.textContent = txt; else if (t) t.textContent = steps[idx][0];
+  };
+  window.__gpgBooted = function () {
+    booted = true;
+    window.__gpgStep(steps.length - 1);
+    var l = document.getElementById('loading');
+    if (l) { l.classList.add('out'); setTimeout(function () { l.style.display = 'none'; }, 220); }
+  };
+  window.__gpgFatal = function (msg, detail) {
+    if (booted || failed) return;
+    failed = true;
+    var c = document.getElementById('crash'), l = document.getElementById('loading');
+    if (l) l.style.display = 'none';
+    if (!c) { alert('Grand Pixel Game: ' + msg); return; }
+    c.classList.remove('hidden');
+    var tx = document.getElementById('crash-text');
+    if (tx) tx.textContent = msg;
+    var d = document.getElementById('crash-detail');
+    if (d) {
+      d.textContent = String(detail || '') +
+        '\n\nnavegador: ' + navigator.userAgent +
+        '\nwebgl: ' + (function () {
+          try {
+            var cv = document.createElement('canvas');
+            return cv.getContext('webgl') ? 'ok' : 'indisponível';
+          } catch (e) { return 'erro: ' + e.message; }
+        })();
+    }
+    var r = document.getElementById('crash-retry');
+    if (r) r.onclick = function () { location.reload(); };
+    var cp = document.getElementById('crash-compat');
+    if (cp) cp.onclick = function () {
+      var u = location.href.split('?')[0] + '?compat=1';
+      location.href = u;
+    };
+    var co = document.getElementById('crash-copy');
+    if (co) co.onclick = function () {
+      var txt = msg + '\n' + (d ? d.textContent : '');
+      try { navigator.clipboard.writeText(txt); co.textContent = 'copiado'; } catch (e) { co.textContent = 'copie manualmente'; }
+    };
+  };
+
+  // vigia: 12 s sem terminar de abrir = mostra o que houve
+  var watch = setInterval(function () {
+    if (booted || failed) { clearInterval(watch); return; }
+    if (Date.now() - t0 > 12000) {
+      clearInterval(watch);
+      window.__gpgFatal(
+        'O jogo demorou demais para abrir (mais de 12 s).',
+        'A etapa que travou foi: "' + steps[idx][0] + '". ' +
+        'Costuma ser WebGL bloqueado ou driver de vídeo antigo.'
+      );
+    }
+  }, 500);
+})();
+</script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

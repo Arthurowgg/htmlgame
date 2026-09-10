@@ -5,20 +5,26 @@ import { World, TS, WORLD_HALF, WATER_Y, REGIONS, POIS } from './world.js';
 import { Renderer, ART } from './renderer.js';
 import { audio } from './audio.js';
 import { clamp, lerp, smoothstep } from './math.js';
+import { PIX, applyPixelScale, readUrlBits } from './pixel.js';
+import { MAP, ZOOMS, drawMinimap, drawBigMap, bigMapPick, bigMapSize, poiIconName } from './minimap.js';
+import { drawIcon, iconImg, ICON_SIZE } from './icons.js';
 import { MAIN as MAIN_SRC, SIDE, SIDE_TOTAL, ARTIFACTS, have, rewText, whyLocked } from './quests.js';
 // capítulos usam campos diretos (item/n/boss); normaliza para alvo único
 const MAIN = MAIN_SRC.map(m => Object.assign({}, m, {
   alvo: m.alvo ? m.alvo : m.item ? { item: m.item, n: m.n } : m.boss ? { boss: m.boss } : null,
 }));
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const SEED = 20260908;
 const world = new World(SEED);
 const glCanvas = document.getElementById('gl');
 const uiCanvas = document.getElementById('ui');
 const ui = uiCanvas.getContext('2d');
-const mini = document.getElementById('mini').getContext('2d');
-const rdr = new Renderer(glCanvas, world);
+const stage = document.getElementById('stage');
+if (ui) ui.imageSmoothingEnabled = false;
+let rdr = null;                     // criado no boot, dentro de try/catch
+const URB = readUrlBits();          // ?compat=1 / ?pixel=N
+PIX.compat = URB.compat;
 
 // ---------------- configuração ----------------
 const CFG = Object.assign({ sfx: 0.8, qual: 1 }, loadCfg());
@@ -1219,27 +1225,29 @@ function renderMap(c) {
   const total = POI_LIST.length;
   const known = POI_LIST.filter(p => visited.has(p.id)).length;
   $('log-progress').textContent = 'lugares ' + known + '/' + total;
+  let h = '<div class="maptab"><button class="btn primary" id="logmap-open">Abrir o mapa da ilha (M)</button>' +
+    '<div class="tiny">' + known + ' de ' + total + ' lugares descobertos · ' +
+    (MAP.dest ? 'destino: ' + MAP.dest.nome : 'nenhum destino marcado') + '</div></div>';
   const byReg = {};
   for (const p of POI_LIST) (byReg[p.regiao] = byReg[p.regiao] || []).push(p);
-  let h = '<div class="gr-title">Exploração (' + known + '/' + total + ')</div>';
   for (const rg of Object.keys(byReg)) {
-    h += '<div class="gr-title" style="color:#ffd76a">' + regionName(rg) + '</div>';
+    h += '<div class="gr-title">' + regionName(rg) + '</div>';
     for (const p of byReg[rg]) {
       const seen = visited.has(p.id);
-      const show = seen || (p.oculto ? hasLens : true);
-      if (!show) {
-        h += '<div class="loc unknown"><div class="ico" style="background:#2a2740;color:#6a6390">?</div><div class="nm">lugar oculto…</div><div class="st">use a Lente da Verdade</div></div>';
+      if (p.oculto && !seen && !hasLens) {
+        h += '<div class="loc unknown"><span class="ico">' + iconImg('missao', 2) + '</span>' +
+          '<span class="nm">lugar oculto…</span><span class="st">use a Lente da Verdade</span></div>';
         continue;
       }
-      h += '<div class="loc"><div class="ico" style="background:' + (p.cor || '#ffd76a') + '">' + (seen ? (p.icone || '•') : (p.icone || '•')) + '</div>' +
-        '<div class="nm">' + p.nome + '</div>' +
-        '<div class="st">' + (seen ? 'visitado' : '') + '</div></div>';
+      const d = Math.round(Math.hypot(p.x - player.x, p.z - player.z));
+      h += '<div class="loc"><span class="ico">' + iconImg(poiIconName(p), 2) + '</span>' +
+        '<span class="nm">' + p.nome + '</span><span class="st">' + (seen ? d + 'm' : 'não visitado') + '</span></div>';
     }
   }
   c.innerHTML = h;
+  const open = document.getElementById('logmap-open');
+  if (open) open.addEventListener('click', () => openMap());
 }
-
-// ---------------- HUD / desenho ----------------
 function syncHud() {
   // corações
   const heartsEl = $('hearts');
@@ -1562,8 +1570,8 @@ function drawOverlay() {
       drawMarker(ex, ey, 8, (o.cor || '#ffd76a'), true);
     }
   }
-  // minimapa
-  drawMini();
+  // minimapa (desenhado na tela do jogo, na mesma grade de pixels)
+  drawMinimap(ui, W, H, mapState());
   // vinheta suave
   const v = ui.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.max(W, H) * 0.72);
   v.addColorStop(0, 'rgba(0,0,0,0)');
@@ -1595,77 +1603,14 @@ function drawMarker(x, y, r, col, edge = false) {
   ui.fill();
   ui.restore();
 }
-function drawMini() {
-  const c = mini;
-  const S = c.canvas.width;
-  c.clearRect(0, 0, S, S);
-  const R = S / 2 - 4;
-  const scale = 3.1; // unidades de mundo por pixel
-  const cx = S / 2, cy = S / 2;
-  // fundo
-  c.fillStyle = 'rgba(10,8,24,0.55)';
-  c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.fill();
-  c.save();
-  c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.clip();
-  const wx = player.x, wz = player.z;
-  const sx = x => cx + (x - wx) / scale;
-  const sz = z => cy + (z - wz) / scale;
-  // POIs visitados / com lente
-  const hasLens = have(arts, 'a9');
-  for (const p of POI_LIST) {
-    const seen = visited.has(p.id);
-    if (!seen) continue;
-    const dx = p.x - wx, dz = p.z - wz;
-    const d = Math.hypot(dx, dz) / scale;
-    if (d > R - 7) continue;
-    const px = sx(p.x), py = sz(p.z);
-    c.fillStyle = (p.cor || (p.selo ? '#ffe9a8' : '#ffd76a'));
-    c.font = '700 8px system-ui';
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillText(p.icone || '•', px, py + 0.5);
-  }
-  if (hasLens) {
-    for (const p of POI_LIST) {
-      if (!p.oculto || visited.has(p.id)) continue;
-      const dx = p.x - wx, dz = p.z - wz;
-      const d = Math.hypot(dx, dz) / scale;
-      if (d > R - 7) continue;
-      c.fillStyle = 'rgba(255,255,255,0.55)';
-      c.beginPath(); c.arc(sx(p.x), sz(p.z), 1.7, 0, Math.PI * 2); c.fill();
-    }
-  }
-  // objetivo
-  const o = objectiveLine();
-  if (o && o.x !== null) {
-    const dx = (o.x - wx) / scale, dz = (o.z - wz) / scale;
-    if (Math.hypot(dx, dz) < R - 6) {
-      c.fillStyle = o.cor || '#ffd76a';
-      c.shadowColor = o.cor; c.shadowBlur = 6;
-      c.beginPath(); c.arc(cx + dx, cy + dz, 2.6, 0, Math.PI * 2); c.fill();
-      c.shadowBlur = 0;
-    }
-  }
-  // jogador
-  c.fillStyle = '#fff';
-  c.shadowColor = '#fff'; c.shadowBlur = 8;
-  c.beginPath(); c.arc(cx, cy, 3, 0, Math.PI * 2); c.fill();
-  c.shadowBlur = 0;
-  c.fillStyle = '#ffd76a';
-  c.beginPath();
-  c.moveTo(cx, cy - 4.4);
-  c.lineTo(cx + 3.2, cy + 3);
-  c.lineTo(cx - 3.2, cy + 3);
-  c.closePath(); c.fill();
-  c.restore();
-  // bússola
-  c.fillStyle = 'rgba(255,255,255,0.4)';
-  c.font = '700 7px system-ui';
-  c.textAlign = 'center';
-  c.fillText('N', cx, 8);
-  c.strokeStyle = 'rgba(255,255,255,0.12)';
-  c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.stroke();
+function mapState() {
+  return {
+    player, cam, visited, hasLens: have(arts, 'a9'),
+    objective: objectiveLine(), world, regions: REGIONS, pois: POI_LIST,
+    landmarks: world.landmarks || [],
+  };
 }
+function tickMap(dt) { MAP.t += dt; }
 function bossBarSync() {
   const el = $('bossbar');
   const b = enemies.find(e => e.key && !e.dead && dist2d(e.x, e.z, player.x, player.z) < 55);
@@ -1705,10 +1650,17 @@ function setupInput() {
     if (phase === 'pause') {
       if (k === 'Escape') togglePause();
       else if (k === 'KeyQ') openLog();
+      else if (k === 'KeyM') openMap();
       return;
     }
     if (phase === 'log') {
       if (k === 'Escape' || k === 'KeyQ') closeLog();
+      else if (k === 'KeyM') openMap();
+      return;
+    }
+    if (phase === 'map') {
+      if (k === 'Escape' || k === 'KeyM') closeMap();
+      else if (k === 'KeyQ') { closeMap(); openLog(); }
       return;
     }
     if (phase === 'play') {
@@ -1718,8 +1670,11 @@ function setupInput() {
       if (k === 'Space') { if (dlg) advanceDlg(); else input.jump = true; }
       if (k === 'Enter') { if (dlg) advanceDlg(); }
       if (k === 'KeyF' || k === 'KeyJ') input.atk = true;
-      if (k === 'KeyM') toggleMute();
-      if (k === 'KeyC' && !dlg) toastFx('controles: WASD mover · E agir · F/J atacar · Q diário · M som · Esc pausa');
+      if (k === 'KeyN') toggleMute();
+      if (k === 'KeyM' && !dlg) openMap();
+      if (k === 'BracketLeft') zoomMap(-1);
+      if (k === 'BracketRight') zoomMap(1);
+      if (k === 'KeyC' && !dlg) toastFx('controles: WASD mover · E agir · F/J atacar · Q diário · M mapa · N som · Esc pausa');
     }
   });
   window.addEventListener('keyup', e => {
@@ -1779,6 +1734,7 @@ function setupInput() {
     if (phase === 'options') { goBackFromOptions(); return; }
     if (phase === 'pause') { togglePause(); return; }
     if (phase === 'log') { closeLog(); return; }
+    if (phase === 'map') { closeMap(); return; }
     if (phase === 'play' && dlg) { advanceDlg(); return; }
     if (phase === 'play') swing();
     e.preventDefault();
@@ -1796,6 +1752,18 @@ function setupInput() {
   $('p-continue').addEventListener('click', () => togglePause());
   $('p-log').addEventListener('click', () => openLog());
   $('p-stats').addEventListener('click', () => openStats());
+  $('btn-map').addEventListener('click', () => openMap());
+  $('p-map').addEventListener('click', () => openMap());
+  $('map-close').addEventListener('click', () => closeMap());
+  $('map-back').addEventListener('click', () => closeMap());
+  $('bigmap').addEventListener('click', mapClick);
+  for (const b of document.querySelectorAll('#map-legend button')) {
+    b.addEventListener('click', () => {
+      MAP.legend = parseInt(b.dataset.l, 10) || 0;
+      for (const o of document.querySelectorAll('#map-legend button')) o.classList.toggle('on', o === b);
+      drawBigMapScreen();
+    });
+  }
   $('stats-back').addEventListener('click', () => closeStats());
   $('p-options').addEventListener('click', () => { phase = 'pause'; openOptions(); });
   $('p-howto').addEventListener('click', () => { phase = 'pause'; openHowto(); });
@@ -1921,13 +1889,11 @@ function startNew() {
 }
 // estado de tela
 function onResize() {
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const w = Math.max(320, Math.floor(window.innerWidth * dpr));
-  const h = Math.max(240, Math.floor(window.innerHeight * dpr));
-  glCanvas.width = w; glCanvas.height = h;
-  uiCanvas.width = w; uiCanvas.height = h;
-  winW = w; winH = h;
-  rdr.resize(w, h);
+  const p = applyPixelScale(stage, glCanvas, uiCanvas, CFG.qual || 1);
+  if (URB.pixel) p.scale = URB.pixel;
+  winW = p.w; winH = p.h;
+  if (ui) ui.imageSmoothingEnabled = false;
+  if (rdr) rdr.resize(p.w, p.h);
 }
 let schedSpawn = 0;
 let schedPrompt = 0;
@@ -1962,6 +1928,7 @@ function loop(now) {
     }
     playTime += dt;
     medalsTick();
+    tickMap(dt);
     syncHud();
     syncObjective();
     bossBarSync();
@@ -1986,10 +1953,16 @@ function loop(now) {
     // mantém a câmera atual
   }
   const inGame = phase === 'play' || phase === 'pause';
-  {
-    const entities = buildEntities(inGame);
-    const glows = inGame ? buildGlows() : [];
-    rdr.render(cam, time, entities, glows, envFor());
+  if (rdr) {
+    try {
+      const entities = buildEntities(inGame);
+      const glows = inGame && rdr.glowsOn !== false ? buildGlows() : [];
+      rdr.render(cam, time, entities, glows, envFor());
+    } catch (err) {
+      rdr = null;
+      fatal(err, 'renderização');
+      return;
+    }
   }
   if (phase === 'play' || phase === 'pause') {
     drawOverlay();
@@ -2113,15 +2086,114 @@ function closeStats() {
   saveGame();
 }
 
+// ---------------- mapa da ilha ----------------
+function zoomMap(d) {
+  MAP.zoom = Math.max(0, Math.min(ZOOMS.length - 1, MAP.zoom + d));
+  toastFx('zoom do minimapa: ' + ZOOMS[MAP.zoom].lab + ' (' + ZOOMS[MAP.zoom].nome + ')');
+}
+function openMap() {
+  if (phase !== 'play' && phase !== 'pause' && phase !== 'log') return;
+  window.__mapFrom = phase === 'log' ? (window.__logFrom || 'play') : phase;
+  phase = 'map';
+  showScreen('scr-map');
+  renderMapSide();
+  drawBigMapScreen();
+  audio.sfx('select');
+}
+function closeMap() {
+  phase = window.__mapFrom === 'pause' ? 'pause' : 'play';
+  if (phase === 'pause') showScreen('scr-pause'); else showScreen(null);
+  saveGame();
+}
+function drawBigMapScreen() {
+  const cv = $('bigmap');
+  if (!cv) return;
+  const c = cv.getContext('2d');
+  c.imageSmoothingEnabled = false;
+  drawBigMap(c, mapState());
+}
+function setDest(x, z, nome) {
+  if (MAP.dest && Math.abs(MAP.dest.x - x) < 1 && Math.abs(MAP.dest.z - z) < 1) {
+    MAP.dest = null; toastFx('destino limpo');
+  } else {
+    MAP.dest = { x, z, nome };
+    toastFx('destino: ' + nome);
+  }
+  renderMapSide();
+  drawBigMapScreen();
+}
+function renderMapSide() {
+  const el = $('map-side');
+  if (!el) return;
+  const st = mapState();
+  const total = st.pois.length;
+  const known = st.pois.filter(p => visited.has(p.id)).length;
+  const sub = $('map-sub');
+  if (sub) sub.textContent = 'lugares ' + known + '/' + total + (MAP.dest ? ' · destino: ' + MAP.dest.nome : '');
+  const rows = [];
+  const byReg = {};
+  for (const p of st.pois) (byReg[p.regiao] = byReg[p.regiao] || []).push(p);
+  for (const reg of REGIONS) {
+    const list = byReg[reg.id];
+    if (!list) continue;
+    rows.push('<div class="gr-title">' + reg.name + '</div>');
+    for (const p of list) {
+      const seen = visited.has(p.id);
+      if (p.oculto && !seen && !st.hasLens) {
+        rows.push('<div class="loc unknown"><span class="ico">' + iconImg('missao', 2) + '</span>' +
+          '<span class="nm">lugar oculto…</span><span class="st">Lente da Verdade</span></div>');
+        continue;
+      }
+      const d = Math.round(Math.hypot(p.x - player.x, p.z - player.z));
+      rows.push('<div class="loc' + (MAP.sel === p.id ? ' sel' : '') + '" data-poi="' + p.id + '">' +
+        '<span class="ico">' + iconImg(poiIconName(p), 2) + '</span>' +
+        '<span class="nm">' + p.nome + '</span>' +
+        '<span class="st">' + (seen ? d + 'm' : 'não visitado') + '</span></div>');
+    }
+  }
+  el.innerHTML = rows.join('');
+  for (const row of el.querySelectorAll('.loc[data-poi]')) {
+    row.addEventListener('click', () => {
+      const p = POI_LIST.find(x => x.id === row.dataset.poi);
+      if (!p) return;
+      MAP.sel = p.id;
+      setDest(p.x, p.z, p.nome);
+    });
+  }
+}
+function mapClick(ev) {
+  const cv = $('bigmap');
+  if (!cv) return;
+  const r = cv.getBoundingClientRect();
+  const S = bigMapSize();
+  const ix = (ev.clientX - r.left) * (S.w / r.width);
+  const iy = (ev.clientY - r.top) * (S.h / r.height);
+  const pick = bigMapPick(ix, iy, mapState());
+  if (!pick) return;
+  if (pick.kind === 'poi') { MAP.sel = pick.poi.id; setDest(pick.poi.x, pick.poi.z, pick.poi.nome); }
+  else setDest(pick.x, pick.z, 'ponto marcado');
+}
+
+function step(i, txt) { try { if (window.__gpgStep) window.__gpgStep(i, txt); } catch (e) {} }
+
 function boot() {
+  step(1, 'lendo o mundo…');
   onResize();
   applyCfg();
+  if (!rdr) {
+    step(2, URB.compat ? 'abrindo em modo compatibilidade…' : 'acendendo a luz…');
+    rdr = new Renderer(glCanvas, world, { antialias: !URB.compat });
+    rdr.resize(winW, winH);
+    if (URB.compat) rdr.glowsOn = false;
+  }
+  step(3, 'levantando o terreno…');
   player.y = Math.max(1, playerGround());
   loadObstacles();
+  step(4, 'povoando a ilha…');
   spawnTick();
   setupInput();
   syncQualUI();
-  document.getElementById('loading').style.display = 'none';
+  step(5, 'abrindo a ilha…');
   const ve = document.getElementById('ver');
   if (ve) ve.textContent = 'v' + VERSION;
   showScreen('scr-title');
@@ -2129,8 +2201,29 @@ function boot() {
   cont.style.display = hasSave() ? '' : 'none';
   phase = 'title';
   requestAnimationFrame(loop);
+  if (window.__gpgBooted) window.__gpgBooted();
 }
-boot();
+
+// nada de tela travada: qualquer erro aparece com o motivo e o que fazer
+function fatal(err, onde) {
+  const msg = err && err.message ? err.message : String(err);
+  const det = (onde ? 'em ' + onde + '\n' : '') + (err && err.stack ? err.stack : '');
+  try { console.error('[gpg]', msg, err); } catch (e) {}
+  try { if (window.__gpgFatal) window.__gpgFatal(msg, det); } catch (e) {}
+}
+window.addEventListener('error', e => {
+  if (!window.__gpgBootOk) fatal(e.error || new Error(e.message || 'erro de script'), 'script');
+});
+window.addEventListener('unhandledrejection', e => {
+  if (!window.__gpgBootOk) fatal(e.reason || new Error('promessa rejeitada'), 'promessa');
+});
+
+try {
+  boot();
+  window.__gpgBootOk = true;
+} catch (err) {
+  fatal(err, 'abertura');
+}
 
 // handle de depuração
 if (typeof window !== 'undefined') {
@@ -2152,5 +2245,7 @@ if (typeof window !== 'undefined') {
     get playTime() { return playTime; },
     get deaths() { return deaths; },
     openStats, closeStats, renderStats,
+    openMap, closeMap, zoomMap, setDest, mapClick, drawBigMapScreen, mapState, MAP, ZOOMS,
+    drawMinimap, PIX,
   };
 }
