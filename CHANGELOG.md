@@ -13,6 +13,15 @@ funcionando com jogos novos: o formato das releases é estável.
 
 ---
 
+## [Launcher 1.1.2] — 2026-09-10
+
+- O launcher agora **prefere o arquivo anexado na release (Assets)** para se
+  atualizar e para baixar o jogo; sem arquivo anexado, usa o link versionado na
+  árvore da tag — as duas formas funcionam e dá para publicar das duas maneiras.
+- Automação pronta em `.github/release-assets.workflow.yml`: ativando-a, toda
+  tag publicada ganha o executável/pacote anexado automaticamente (e a primeira
+  execução preenche as releases antigas).
+
 ## [Jogo 1.2.0] — 2026-09-10
 
 **A ilha ficou de verdade, e a tela nunca mais trava.**

@@ -368,6 +368,33 @@ int main() {
   check("link do launcher", cat.launcher_download_url(Engine::raw_base_default()) ==
         "https://github.com/Arthurowgg/htmlgame/raw/refs/tags/launcher-v1.2.0/launcher/dist/"
         "GrandPixelGameLauncher-v1.2.0-win64.exe");
+
+  // quando a release tem o arquivo anexado (Assets), ele é o preferido — tanto
+  // para o zip do jogo quanto para o exe do launcher
+  {
+    const char* com = "["
+      "{\"tag_name\":\"launcher-v1.2.0\",\"name\":\"Launcher\",\"body\":\"\","
+      "\"published_at\":\"2026-09-05T10:00:00Z\",\"draft\":false,\"prerelease\":false,"
+      "\"assets\":[{\"name\":\"GrandPixelGameLauncher-v1.2.0-win64.exe\",\"size\":1732608,"
+      "\"browser_download_url\":\"https://github.com/Arthurowgg/htmlgame/releases/download/"
+      "launcher-v1.2.0/GrandPixelGameLauncher-v1.2.0-win64.exe\"}]},"
+      "{\"tag_name\":\"game-v1.1.0\",\"name\":\"Jogo\",\"body\":\"\","
+      "\"published_at\":\"2026-09-09T10:00:00Z\",\"draft\":false,\"prerelease\":false,"
+      "\"assets\":[{\"name\":\"GrandPixelGame-v1.1.0-web.zip\",\"size\":215712,"
+      "\"browser_download_url\":\"https://github.com/Arthurowgg/htmlgame/releases/download/"
+      "game-v1.1.0/GrandPixelGame-v1.1.0-web.zip\"}]}]";
+    Catalog c2;
+    check("catálogo com assets anexados", c2.parse(com, "1.0.0", Engine::raw_base_default()));
+    check("zip do jogo vem do asset", c2.games[0].download_url ==
+          "https://github.com/Arthurowgg/htmlgame/releases/download/game-v1.1.0/"
+          "GrandPixelGame-v1.1.0-web.zip", c2.games[0].download_url);
+    check("tamanho do asset lido", c2.games[0].size == 215712 && c2.games[0].asset_name ==
+          "GrandPixelGame-v1.1.0-web.zip");
+    check("exe do launcher vem do asset", c2.launcher_download_url(Engine::raw_base_default()) ==
+          "https://github.com/Arthurowgg/htmlgame/releases/download/launcher-v1.2.0/"
+          "GrandPixelGameLauncher-v1.2.0-win64.exe", c2.launcher_download_url(""));
+    check("tamanho do exe lido", c2.launcher_size == 1732608);
+  }
   check("sem releases do jogo = erro claro",
         !Catalog().parse("[{\"tag_name\":\"launcher-v1.0.0\",\"draft\":false,\"assets\":[]}]", "1.0.0",
                          Engine::raw_base_default()));

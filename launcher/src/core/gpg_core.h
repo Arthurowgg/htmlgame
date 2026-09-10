@@ -142,14 +142,16 @@ struct Catalog {
   std::vector<Release> games;        // mais novo primeiro
   std::string launcher_tag;          // launcher-vX.Y.Z mais novo publicado
   std::string launcher_version;      // X.Y.Z
+  std::string launcher_url;          // asset da release do launcher, se houver
+  long long   launcher_size = 0;     // tamanho do asset (0 = desconhecido)
   bool launcher_newer = false;       // existe launcher mais novo que o rodando
   bool ok = false;
   std::string error;
 
   const Release* by_tag(const std::string& tag) const;
   const Release* newest() const { return games.empty() ? nullptr : &games.front(); }
-  // O launcher monta o link direto da árvore da tag quando a release não tem
-  // asset anexado (é sempre o caso: publicamos o zip versionado no repositório).
+  // Cada release procura primeiro o arquivo anexado (Assets) e, se não houver,
+  // usa o arquivo versionado na árvore da tag — as duas formas funcionam.
   bool parse(const std::string& json_text, const std::string& self_version,
              const std::string& raw_base, bool include_prerelease = false);
   std::string launcher_download_url(const std::string& raw_base) const;

@@ -22,6 +22,8 @@ const Release* Catalog::by_tag(const std::string& tag) const {
 
 std::string Catalog::launcher_download_url(const std::string& raw_base) const {
   if (launcher_version.empty()) return "";
+  // asset anexado à release tem prioridade; sem ele, o exe versionado na tag
+  if (!launcher_url.empty()) return launcher_url;
   return raw_base + launcher_tag + "/launcher/dist/GrandPixelGameLauncher-v" +
          launcher_version + "-win64.exe";
 }
@@ -31,6 +33,8 @@ bool Catalog::parse(const std::string& json_text, const std::string& self_versio
   games.clear();
   launcher_tag.clear();
   launcher_version.clear();
+  launcher_url.clear();
+  launcher_size = 0;
   launcher_newer = false;
   ok = false;
   error.clear();
@@ -66,6 +70,20 @@ bool Catalog::parse(const std::string& json_text, const std::string& self_versio
       if (launcher_version.empty() || version_less(launcher_version, ver)) {
         launcher_version = ver;
         launcher_tag = tag;
+        launcher_url.clear();
+        launcher_size = 0;
+        if (const Json* ja = r.get("assets")) {
+          for (size_t k = 0; k < ja->arr.size(); k++) {
+            const Json& a = ja->arr[k];
+            std::string an = a.get("name") ? a.get("name")->str() : "";
+            if (ends_with(an, "-win64.exe")) {
+              launcher_url = a.get("browser_download_url")
+                ? a.get("browser_download_url")->str() : "";
+              launcher_size = a.get("size") ? a.get("size")->num(0) : 0;
+              break;
+            }
+          }
+        }
       }
       continue;                                    // launcher não é jogo
     }
