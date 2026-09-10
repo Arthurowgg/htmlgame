@@ -3,83 +3,51 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Grand Pixel Game — Desktop Launcher</title>
+<title>Grand Pixel Game — Setup</title>
 <style>
-  :root { --bg:#120e1c; --gold:#e8b84a; --text:#ece6d6; --muted:#9488a8; --green:#4ac47a; --panel:#201828; --line:#483a60; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    min-height: 100vh; font-family: "Segoe UI", system-ui, sans-serif;
-    background:
-      radial-gradient(ellipse 60% 40% at 70% 10%, #3d2a8844, transparent),
-      radial-gradient(ellipse 50% 50% at 10% 90%, #e8b84a22, transparent),
-      var(--bg);
-    color: var(--text); display: flex; align-items: center; justify-content: center; padding: 24px;
-  }
-  .card {
-    max-width: 560px; width: 100%; background: var(--panel);
-    border: 3px solid var(--line); border-radius: 4px; padding: 28px 28px 22px;
-    box-shadow: 0 0 0 1px #000, 8px 8px 0 #0006;
-  }
-  .icon {
-    width: 64px; height: 64px; image-rendering: pixelated;
-    background:
-      linear-gradient(#e8b84a,#e8b84a) 12px 8px/40px 8px no-repeat,
-      linear-gradient(#c47a3a,#c47a3a) 8px 16px/48px 28px no-repeat,
-      linear-gradient(#1a1008,#1a1008) 20px 24px/8px 8px no-repeat,
-      linear-gradient(#1a1008,#1a1008) 36px 24px/8px 8px no-repeat,
-      linear-gradient(#8a5a2a,#8a5a2a) 12px 44px/40px 8px no-repeat,
-      #120e1c;
-    border: 2px solid var(--line); margin-bottom: 16px;
-  }
-  h1 { font-size: 22px; letter-spacing: 0.08em; color: var(--gold); margin-bottom: 6px; }
-  h1 span { display: block; color: var(--text); font-size: 14px; letter-spacing: 0.14em; font-weight: 600; margin-top: 4px; }
-  p { color: var(--muted); line-height: 1.55; font-size: 14px; margin: 10px 0; }
-  code, pre {
-    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-    background: #0c0a12; border: 1px solid var(--line); border-radius: 3px;
-  }
-  code { padding: 1px 6px; font-size: 12px; color: var(--gold); }
-  pre { padding: 12px 14px; font-size: 12px; overflow: auto; color: #c8c0d8; margin: 12px 0 16px; line-height: 1.5; }
-  .btn {
-    display: inline-block; margin: 4px 8px 4px 0; padding: 10px 16px;
-    background: linear-gradient(#5ae090, #2bb673); color: #062416;
-    font-weight: 800; font-size: 13px; letter-spacing: 0.06em; text-decoration: none;
-    border: 2px solid #1a7a4a; box-shadow: 0 3px 0 #1a7a4a; border-radius: 3px;
-  }
-  .btn.secondary { background: #2a2040; color: var(--text); border-color: var(--line); box-shadow: 0 3px 0 #1a1428; }
-  .btn:hover { filter: brightness(1.06); }
-  .note { font-size: 12px; color: var(--muted); margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
-  .tag { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
-    color: var(--green); border: 1px solid #4ac47a55; background: #4ac47a18; padding: 3px 8px; border-radius: 999px; margin-bottom: 12px; }
+  :root{--bg:#070b14;--gold:#e8b84a;--text:#e8eef8;--muted:#8b97ae;--green:#3dd68c;--panel:#0e1524;--line:#2a3a58}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;font-family:system-ui,sans-serif;background:radial-gradient(ellipse 60% 40% at 70% 10%,#4d9bff33,transparent),var(--bg);color:var(--text);display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{max-width:580px;width:100%;background:var(--panel);border:3px solid var(--line);padding:28px;box-shadow:8px 8px 0 #0006}
+  .tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.1em;color:var(--green);border:1px solid #3dd68c55;background:#3dd68c14;padding:3px 8px;border-radius:999px;margin-bottom:14px}
+  h1{font-size:22px;letter-spacing:.08em;color:var(--gold);margin-bottom:4px}
+  h1 span{display:block;color:var(--text);font-size:14px;margin-top:4px;letter-spacing:.12em}
+  p{color:var(--muted);line-height:1.55;font-size:14px;margin:10px 0}
+  pre,code{font-family:ui-monospace,Consolas,monospace;background:#05080f;border:1px solid var(--line)}
+  code{padding:1px 6px;font-size:12px;color:var(--gold)}
+  pre{padding:12px 14px;font-size:12px;overflow:auto;color:#c8d0e0;margin:12px 0;line-height:1.5}
+  .btn{display:inline-block;margin:6px 8px 6px 0;padding:12px 18px;background:linear-gradient(#4ae08a,#2bb673);color:#062416;font-weight:800;font-size:13px;letter-spacing:.05em;text-decoration:none;border:2px solid #1a7a4a;box-shadow:0 3px 0 #1a7a4a}
+  .btn.sec{background:#1a2438;color:var(--text);border-color:var(--line);box-shadow:0 3px 0 #0a1018}
+  .note{font-size:12px;color:var(--muted);margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+  ol{margin:8px 0 8px 18px;color:var(--muted);font-size:14px;line-height:1.6}
 </style>
 </head>
 <body>
-  <div class="card">
-    <div class="tag">STANDALONE DESKTOP APP · NOT A WEB LAUNCHER</div>
-    <div class="icon" aria-hidden="true"></div>
-    <h1>GRAND PIXEL GAME<span>PIXEL LAUNCHER 3.0</span></h1>
-    <p>
-      The launcher is a <b>real desktop application</b> with a pixel-art UI —
-      version picker, install library, profile, and play — inspired by the Minecraft launcher.
-      It is <b>not</b> this HTML page.
-    </p>
-    <p>From the repository root:</p>
-<pre># setup once
-python3 -m venv .venv
-.venv/bin/pip install pygame pillow pyinstaller
+<div class="card">
+  <div class="tag">ONE-CLICK SETUP · NO REPO CLONE</div>
+  <h1>GRAND PIXEL GAME<span>LUMINA ISLE · LAUNCHER 3.1</span></h1>
+  <p>Install a <b>standalone pixel launcher</b> that downloads the game for you and opens it in its <b>own app window</b>.</p>
 
-# run the launcher
-.venv/bin/python launcher/run.py</pre>
-    <p>Or build a single executable:</p>
-<pre>.venv/bin/python launcher/build_exe.py
-# → launcher/dist/GrandPixelGameLauncher</pre>
-    <a class="btn secondary" href="game/">Play game source directly</a>
-    <a class="btn secondary" href="versions/2.0.0/">Play v2.0.0</a>
-    <p class="note">
-      Data dir: <code>~/.local/share/GrandPixelGame/</code> (Linux) ·
-      <code>%LOCALAPPDATA%\GrandPixelGame\</code> (Windows) ·
-      Docs: <code>launcher/README.md</code>
-    </p>
-  </div>
+  <p><b>Windows</b></p>
+  <ol>
+    <li>Install <a href="https://www.python.org/downloads/" style="color:var(--gold)">Python 3</a> (tick “Add to PATH”)</li>
+    <li>Download the setup script and run it</li>
+  </ol>
+<pre>curl -LO https://raw.githubusercontent.com/Arthurowgg/htmlgame/arena/01a08cbd-htmlgame/setup/GPG_Setup.py
+py GPG_Setup.py</pre>
+
+  <p><b>Linux / macOS</b></p>
+<pre>curl -LO https://raw.githubusercontent.com/Arthurowgg/htmlgame/arena/01a08cbd-htmlgame/setup/GPG_Setup.py
+python3 GPG_Setup.py</pre>
+
+  <a class="btn" href="setup/GPG_Setup.py" download>Download GPG_Setup.py</a>
+  <a class="btn sec" href="versions/3.0.0/">Play Lumina Isle in browser</a>
+  <a class="btn sec" href="game/">Dev game source</a>
+
+  <p class="note">
+    After setup: open the launcher → choose <code>3.0.0</code> → Install &amp; Play.<br>
+    Already have the repo? <code>.venv/bin/python launcher/run.py</code>
+  </p>
+</div>
 </body>
 </html>

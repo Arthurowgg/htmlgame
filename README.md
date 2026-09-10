@@ -1,82 +1,56 @@
-# Grand Pixel Game
+# Grand Pixel Game — Lumina Isle
 
-Open-world voxel adventure + a **standalone pixel-art desktop launcher**
-(Minecraft-style version picker → install → play).
+3D open-island RPG (Fortnite-style POIs, fog-of-war map, inventory) + a
+**standalone pixel desktop launcher**. One-click setup — no repo clone needed.
 
-> The launcher is a **real app** (Python / pygame), **not** a web page.
-> Old HTML and broken Windows `.exe` launchers were retired.
+## Install the launcher (easiest)
 
-## Desktop launcher (recommended)
+You only need **Python 3.10+**.
+
+### Windows
+1. Install Python from https://www.python.org/downloads/ (tick *Add to PATH*)
+2. Download [`setup/GPG_Setup.py`](setup/GPG_Setup.py) from this repo / the release
+3. Double-click it  
+   → downloads launcher + game, installs deps, makes a Desktop shortcut
+
+### Linux / macOS
+```bash
+curl -LO https://raw.githubusercontent.com/Arthurowgg/htmlgame/arena/01a08cbd-htmlgame/setup/GPG_Setup.py
+python3 GPG_Setup.py
+```
+
+Then open **Grand Pixel Game Launcher** → pick **3.0.0** → **Install & Play**.  
+The game opens in its **own app window**.
+
+## Run from a clone (devs)
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install pygame pillow pyinstaller
-
+.venv/bin/pip install pygame pillow pywebview
 .venv/bin/python launcher/run.py
 ```
 
-| Keys | Action |
-|------|--------|
-| Enter | Install & Play |
-| ← → | Switch version |
-| 1–4 | Tabs (Play / Library / Profile / Settings) |
-| Esc | Quit |
+## Game (v3.0.0 — Lumina Isle)
 
-### Build a standalone binary
-
-```bash
-.venv/bin/python launcher/build_exe.py
-# → launcher/dist/GrandPixelGameLauncher  (+ versions/ beside it)
-```
-
-### What the launcher does
-
-1. Lists game versions from `versions/catalog.json` (and GitHub `game-v*` tags)
-2. **Installs** a version into app data (`~/.local/share/GrandPixelGame/versions/…`)
-3. **Plays** it via a local server + dedicated browser app window
-4. Passes your profile (name, color, difficulty, scale) into the game
-
-Pixel UI screenshots: `launcher/screenshots/`.
-
-## Game only (browser)
-
-```bash
-python3 -m http.server 8080 --bind 0.0.0.0
-# http://localhost:8080/game/
-# http://localhost:8080/versions/2.0.0/
-```
+| | |
+|-|-|
+| World | Original island with **14 POIs** (cities, docks, neon, ruins, peaks…) |
+| Map | Fog of war — discover places to reveal them |
+| Systems | Inventory, gather, combat, day/night, **god-ray shaders** |
+| Move | **WASD works immediately** · click to lock look · RMB drag look |
 
 ### Controls
+- **WASD** move · **Shift** sprint · **Space** jump  
+- **Mouse** look (click lock, or hold right mouse)  
+- **F / click** attack · **E** talk / gather  
+- **M** map · **I** inventory · **Esc** pause  
 
-| Key | Action |
-|-----|--------|
-| WASD | Move |
-| Mouse | Look (click to lock) |
-| Space | Jump |
-| F / Click | Attack |
-| E | Talk / gather |
-| Q / M / Esc | Quests / Map / Pause |
-
-## Ship a new game version
-
-```bash
-python3 tools/pack_version.py 2.1.0 --notes "What changed"
-git add versions/ && git commit -m "Release game 2.1.0"
-git tag game-v2.1.0 && git push origin HEAD game-v2.1.0
-```
+Direct play (no launcher): `python3 -m http.server 8080` → `/versions/3.0.0/`
 
 ## Layout
-
 ```
-launcher/          standalone pixel desktop app (pygame)
-  run.py
-  app/             UI, core, server, theme, font
-  dist/            built executable
-game/              live game source (WebGL)
-versions/          shipped playable builds (2.0.0, 2.0.1, …)
-tools/pack_version.py
+setup/GPG_Setup.py   one-click installer (download from GitHub)
+launcher/            pixel desktop app (pygame) + native game window
+game/                Lumina Isle source
+versions/3.0.0/      shipped build
 ```
-
-## License
-
-MIT

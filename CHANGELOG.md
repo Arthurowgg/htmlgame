@@ -1,26 +1,23 @@
 # Changelog
 
+## Launcher 3.1.0 — 2026-09-10
+
+- **One-click Setup** (`setup/GPG_Setup.py`) — downloads everything from GitHub, no clone
+- Game opens in a **dedicated native app window** (pywebview child process, else Chrome `--app`)
+- Desktop / Start-menu shortcut creation
+
+## Game 3.0.0 — Lumina Isle — 2026-09-10
+
+- Full core remake: **3D open-island RPG**
+- Fortnite-style **14 POIs** (Haven Plaza, Sun Market, Tide Docks, Neon District, Ironbluff, Old Kingdom, Prism Vale, Ember Peak, Frostcrown, Sky Arena, Beacon Point, Light Temple, Whisper Grove, Golden Fields)
+- **Fog-of-war map** — discover to reveal
+- **Inventory** (blooms, timber, shards, potions, scrap, gold)
+- **Fixed movement** (camera-relative WASD, step-up, sprint)
+- Lighting overhaul: normals, sun arc, **god-ray / sun-shaft overlay**, emissive neon/lava/crystal
+- Day/night cycle, NPCs, combat, gather, sell at market
+
 ## Launcher 3.0.0 — 2026-09-10
 
-- **Standalone pixel-art desktop app** (Python + pygame) — not HTML
-- Minecraft-style tabs: Play · Library · Profile · Settings
-- Custom 5×7 pixel font, bevelled panels, animated island hero banner
-- Version install into app data, local game server, app-mode browser window
-- Profile (name + skin) and settings injected into the game
-- `launcher/run.py` for dev · `launcher/build_exe.py` for a single binary
-- HTML launcher fully retired
+- Standalone pixel-art desktop app (pygame)
 
-## Launcher 2.0.0 — 2026-09-10
-
-- Web launcher (superseded by 3.0)
-
-## Game 2.0.1 (snapshot) — 2026-09-10
-
-- Snapshot channel build for multi-version launcher testing
-
-## Game 2.0.0 — 2026-09-10
-
-- Complete remake of Grand Pixel Game
-- Voxel island world (biomes, village, structures)
-- Day/night, combat, bosses, artifacts, quests
-- Minimap, map, HUD, saves, touch controls
+## Game 2.0.x — retired as latest (still installable)

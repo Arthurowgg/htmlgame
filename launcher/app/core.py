@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 APP_NAME = "GrandPixelGame"
-LAUNCHER_VERSION = "3.0.0"
+LAUNCHER_VERSION = "3.1.0"
 
 
 def app_data_dir() -> Path:
@@ -384,11 +384,10 @@ class LauncherCore:
 
     # ----- play -----
     def play(self, ver: Version) -> tuple[bool, str]:
-        """Install if needed, start local static server, open game in browser (app-like)."""
+        """Start local server and open the game in its own app window."""
         if not self.is_installed(ver):
             return False, "not-installed"
         root = self.install_dir(ver)
-        # stop previous
         self.stop_play()
         try:
             from .http_server import GameServer
@@ -402,8 +401,19 @@ class LauncherCore:
             }
             self._http = GameServer(root, cfg)
             url = self._http.start()
-            # Prefer opening with system browser; try chromium app mode
-            opened = self._open_game_window(url)
+            # 1) native webview window (real app window)
+            opened = False
+            try:
+                from .game_window import open_game
+                opened = open_game(url, title=f"Lumina Isle — {ver.version}")
+                if opened:
+                    self.log("Opened native game window")
+            except Exception as e:
+                self.log(f"native window: {e}")
+            # 2) Chrome/Edge --app= mode
+            if not opened:
+                opened = self._open_game_window(url)
+            # 3) last resort browser tab
             if not opened:
                 webbrowser.open(url)
             self.stats.launches += 1
@@ -466,6 +476,11 @@ class LauncherCore:
         return False
 
     def stop_play(self):
+        try:
+            from .game_window import close_game
+            close_game()
+        except Exception:
+            pass
         if self._http:
             try:
                 self._http.stop()

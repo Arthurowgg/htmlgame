@@ -1,7 +1,23 @@
 {
-  "launcher": "3.0.0",
-  "updated": "2026-09-10T19:32:21Z",
+  "launcher": "3.1.0",
+  "updated": "2026-09-10T20:07:01Z",
   "versions": [
+    {
+      "id": "game-v3.0.0",
+      "version": "3.0.0",
+      "name": "Grand Pixel Game 3.0.0",
+      "type": "release",
+      "date": "2026-09-10T20:07:01Z",
+      "path": "versions/3.0.0/",
+      "size": 85580,
+      "changelog": [
+        "Lumina Isle \u2014 3D open island RPG",
+        "Fortnite-style POIs with fog-of-war map",
+        "Fixed movement, inventory, god rays, day/night",
+        "Cities: Haven, Market, Docks, Neon, Ironbluff..."
+      ],
+      "latest": true
+    },
     {
       "id": "game-v2.0.1",
       "version": "2.0.1",
@@ -31,7 +47,7 @@
         "Minimap, island map, quest log, save system",
         "Touch controls + polished HUD"
       ],
-      "latest": true
+      "latest": false
     }
   ]
 }
