@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Grand Pixel Game — Windows Setup GUI
+OMNI CLASH — Windows Setup GUI
 
-Packaged as Launcher-Setup.exe (PyInstaller, windowed).
+Packaged as OmniClash-Setup.exe (PyInstaller, windowed).
 Double-click → automatic install → optional Launch.
 
 No terminal required for the end user.
@@ -38,7 +38,7 @@ from setup.win_setup_core import (  # noqa: E402
     InstallResult,
 )
 
-APP_TITLE = "Grand Pixel Game — Launcher Setup"
+APP_TITLE = "OMNI CLASH — Setup"
 VERSION = "1.0.0"
 
 
@@ -76,7 +76,7 @@ class SetupApp(tk.Tk):
         ttk.Label(head, text="GRAND PIXEL GAME", style="Title.TLabel").pack(anchor="w")
         ttk.Label(
             head,
-            text="Launcher Setup — download, install, play. No terminal needed.",
+            text="OMNI CLASH Setup — download, install, play. No terminal needed.",
             style="Sub.TLabel",
         ).pack(anchor="w")
 

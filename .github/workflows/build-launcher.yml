@@ -1,27 +1,23 @@
 # ============================================================================
-#  GitHub Actions workflow template for Launcher-Setup.exe
+#  OMNI CLASH — build OmniClash-Setup.exe on a Windows runner and attach it
+#  to the matching GitHub Release.
 #
-#  This file lives at .github/build-launcher.workflow.yml because some
-#  automation tokens cannot create files under .github/workflows/.
+#  Triggers:
+#    - pushing a tag: omni-v* (e.g. omni-v1.0.0)
+#    - manual run (workflow_dispatch) with an optional release tag
 #
-#  TO ACTIVATE (on github.com):
-#    1. Open this file → Edit (pencil)
-#    2. Change the path to:  .github/workflows/build-launcher.yml
-#    3. Commit
-#    4. Actions → "Build Launcher Setup (Windows)" → Run workflow
-#       or: git tag launcher-vX.Y.Z && git push origin launcher-vX.Y.Z
-#
+#  Local build (on Windows): python setup/build_windows_setup.py
 # ============================================================================
-name: Build Launcher Setup (Windows)
+name: Build OmniClash Setup (Windows)
 
 on:
   push:
     tags:
-      - "launcher-v*"
+      - "omni-v*"
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Existing or new release tag (e.g. launcher-v3.2.0). Leave empty to only upload artifact."
+        description: "Existing or new release tag (e.g. omni-v1.0.0). Leave empty to only upload artifact."
         required: false
         default: ""
       create_release:
@@ -34,7 +30,7 @@ permissions:
 
 jobs:
   build-windows:
-    name: Build Launcher-Setup.exe
+    name: Build OmniClash-Setup.exe
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -54,7 +50,7 @@ jobs:
           python -m pip install pyinstaller pillow
           # tkinter ships with the official Windows Python on GitHub-hosted runners
 
-      - name: Build Launcher-Setup.exe
+      - name: Build OmniClash-Setup.exe
         run: |
           python setup/build_windows_setup.py
           dir launcher\dist
@@ -62,23 +58,23 @@ jobs:
       - name: Verify exe exists
         shell: pwsh
         run: |
-          if (-not (Test-Path "launcher\dist\Launcher-Setup.exe")) {
-            Write-Error "launcher/dist/Launcher-Setup.exe was not produced"
+          if (-not (Test-Path "launcher\dist\OmniClash-Setup.exe")) {
+            Write-Error "launcher/dist/OmniClash-Setup.exe was not produced"
             Get-ChildItem -Recurse launcher\dist | Format-Table
             exit 1
           }
-          Get-Item "launcher\dist\Launcher-Setup.exe" | Format-List Name, Length, FullName
-          if (Test-Path "launcher\dist\Launcher-Setup.exe.sha256") {
-            Get-Content "launcher\dist\Launcher-Setup.exe.sha256"
+          Get-Item "launcher\dist\OmniClash-Setup.exe" | Format-List Name, Length, FullName
+          if (Test-Path "launcher\dist\OmniClash-Setup.exe.sha256") {
+            Get-Content "launcher\dist\OmniClash-Setup.exe.sha256"
           }
 
       - name: Upload artifact (Actions)
         uses: actions/upload-artifact@v4
         with:
-          name: Launcher-Setup-windows
+          name: OmniClash-Setup-windows
           path: |
-            launcher/dist/Launcher-Setup.exe
-            launcher/dist/Launcher-Setup.exe.sha256
+            launcher/dist/OmniClash-Setup.exe
+            launcher/dist/OmniClash-Setup.exe.sha256
           if-no-files-found: error
           retention-days: 30
 
@@ -107,28 +103,38 @@ jobs:
           # Create release if it does not exist yet
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" \
-              --title "Grand Pixel Game Launcher ${TAG#launcher-v}" \
+              --title "OMNI CLASH ${TAG#omni-v}" \
               --notes "$(cat <<'EOF'
-          ## Windows installer
+          ## 🥊 OMNI CLASH — Marvel × DC Fan Fighter
 
-          1. Download **Launcher-Setup.exe** from Assets below
-          2. Double-click it
-          3. Click **Install Launcher**
-          4. Open the Launcher from the Desktop shortcut
+          ### Windows installer
+          1. Download **OmniClash-Setup.exe** from Assets below
+          2. Double-click it → **Install**
+          3. Open the **OMNI CLASH** Desktop shortcut → play
 
-          No Python install, no terminal, no `git clone`.
+          ### Play in the browser (no install)
+          Open `versions/omni-1.0.0/` on the repo (or GitHub Pages if enabled).
 
-          The setup downloads the launcher package, installs an embedded Python runtime,
-          creates shortcuts, and can start the launcher when finished.
+          ### Roster 1.0
+          - 🕸️ **SPIDER-MAN** — FREE — Web Shot
+          - 🦇 **BATMAN** — FREE — Batarang
+          - 🤖 IRON MAN — locked (1.1)
+          - ⚔️ WONDER WOMAN — locked (1.1)
+          - 🃏 JOKER — locked (1.1)
+
+          Modes: 1P vs CPU (Rookie/Hero/Legend) · 2 players local · best of 3.
+
+          *Unofficial fan project. Character names belong to Marvel/DC —
+          no assets copied, every pixel is drawn by code.*
           EOF
           )"
           fi
           gh release upload "$TAG" \
-            "launcher/dist/Launcher-Setup.exe" \
+            "launcher/dist/OmniClash-Setup.exe" \
             --clobber
-          if [ -f "launcher/dist/Launcher-Setup.exe.sha256" ]; then
+          if [ -f "launcher/dist/OmniClash-Setup.exe.sha256" ]; then
             gh release upload "$TAG" \
-              "launcher/dist/Launcher-Setup.exe.sha256" \
+              "launcher/dist/OmniClash-Setup.exe.sha256" \
               --clobber || true
           fi
           gh release view "$TAG"

@@ -1,0 +1,19 @@
+{
+  "id": "omni-v1.0.0",
+  "version": "1.0.0",
+  "name": "OMNI CLASH 1.0.0",
+  "entry": "index.html",
+  "files": [
+    "css/style.css",
+    "index.html",
+    "js/ai.js",
+    "js/audio.js",
+    "js/characters.js",
+    "js/fighter.js",
+    "js/lobby.js",
+    "js/main.js",
+    "js/match.js"
+  ],
+  "type": "release",
+  "game": "omni-clash"
+}
