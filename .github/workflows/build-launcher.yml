@@ -77,36 +77,29 @@ jobs:
             ls -la launcher/dist 2>/dev/null || echo "(missing)"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Report build log to issue (failure)
+      - name: Report build log to repo ci-logs/ (failure)
         if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           {
-            echo "### :x: OmniClash-Setup build failed on \`${GITHUB_REF_NAME}\` (run ${GITHUB_RUN_ID})"
+            echo "run: ${GITHUB_RUN_ID}  ref: ${GITHUB_REF_NAME}  sha: ${GITHUB_SHA}"
             echo ""
-            echo '```text'
-            tail -n 120 build.log 2>/dev/null || echo "(no build.log captured)"
-            echo '```'
+            tail -n 150 build.log 2>/dev/null || echo "(no build.log captured)"
             echo ""
-            echo "<details><summary>launcher/dist</summary>"
-            echo ""
-            echo '```text'
+            echo "--- launcher/dist ---"
             ls -la launcher/dist 2>/dev/null || echo "(missing)"
-            echo '```'
-            echo ""
-            echo "</details>"
-          } > issue-body.md
-          ISSUE=$(gh issue list --repo "${GITHUB_REPOSITORY}" --search "OMNI CLASH CI build log in:title" --state open --json number --jq '.[0].number // ""')
-          if [ -z "$ISSUE" ]; then
-            ISSUE=$(gh issue create --repo "${GITHUB_REPOSITORY}" \
-              --title "OMNI CLASH CI build log" \
-              --body "Arquivo automático de logs de build do OmniClash-Setup." \
-              --json number --jq '.number')
-          fi
-          gh issue comment "$ISSUE" --repo "${GITHUB_REPOSITORY}" --body-file issue-body.md
-          echo "posted to issue #$ISSUE"
+          } > ci-build-report.txt
+          B64=$(base64 -w0 ci-build-report.txt)
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X PUT \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/ci-logs/last-build.log" \
+            -d "{\"message\":\"ci log ${GITHUB_RUN_ID}\",\"content\":\"${B64}\"}")
+          echo "contents upload http: ${CODE}"
+          cat ci-build-report.txt
 
       - name: Verify exe exists
         shell: pwsh
