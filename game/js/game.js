@@ -199,6 +199,7 @@ export class Game {
     this.bannerMsg('Lumina Isle awaits');
     this.save();
     this.updateHUD();
+    document.getElementById('stage')?.focus();
   }
 
   continueGame() {
@@ -219,6 +220,7 @@ export class Game {
       this.renderer.maybeRebuild(this.world, this.player.x, this.player.z, true);
       this.bannerMsg('Welcome back, ' + this.player.name);
       this.updateHUD();
+      document.getElementById('stage')?.focus();
     } catch { this.newGame(); }
   }
 
