@@ -13,6 +13,37 @@ funcionando com jogos novos: o formato das releases é estável.
 
 ---
 
+## [Jogo 1.2.0] — 2026-09-10
+
+**A ilha ficou de verdade, e a tela nunca mais trava.**
+
+- **Nunca mais preso em "acendendo o mundo"**: a carga tem barra e etapas, e
+  qualquer erro (WebGL bloqueado, driver antigo, script) aparece numa tela que
+  explica o motivo e oferece *tentar de novo*, *modo compatibilidade* e
+  *copiar detalhes*. Sem WebGL o jogo avisa em vez de girar para sempre.
+- **Pixel art de verdade**: a tela do jogo tem ~360 linhas e é ampliada em
+  múltiplos inteiros, sem suavização — todo pixel é quadrado e do mesmo
+  tamanho. Opção Grossos/Médios/Finos e os atalhos `?pixel=N` e `?compat=1`.
+- **Fonte de pixel própria** (5x8, com minúsculas e acentos), desenhada no
+  repositório e usada no canvas e no HTML (TTF gerado por
+  `tools/build_font.py`). Nada de fonte do sistema, nada de emoji/brilho.
+- **Mapa da ilha (M)**: terreno real com relevo, estradas, mancha de cor por
+  região, ícones de pixel por tipo de ponto, destino marcado, legenda e uma
+  lista lateral navegável que dá a distância de cada lugar.
+- **Minimapa de jogo**: cone de visão, bússola, ícones, marcador de objetivo
+  (seta na borda quando o alvo está fora), zoom com `[` e `]`.
+- **A ilha ganhou vida**: casas com telhado e chaminé, torres de vigia,
+  acampamentos com fogueira, fazenda com canteiros e espantalho, arcos de
+  ruína, mercados, placas, mastros e **pontes** onde as estradas cruzam água.
+- Marcação de destino: clique em qualquer ponto do mapa grande e ele vira
+  destino (aparece no minimapa a caminho).
+- 52 verificações automáticas (incluindo o caso sem WebGL).
+
+## [Launcher 1.1.1] — 2026-09-10
+
+- O servidor local do launcher passou a entregar fontes (`.ttf`, `.otf`,
+  `.woff`) — o jogo agora embute a fonte de pixel própria.
+
 ## [Launcher 1.1.0] — 2026-09-10
 
 Reescrita completa do launcher: agora é um aplicativo de verdade, feito em
