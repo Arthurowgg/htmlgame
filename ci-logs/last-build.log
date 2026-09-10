@@ -1,0 +1,97 @@
+run: 34536121902  ref: omni-v1.0.0  sha: 4d6e0e05a68a047e7f8b872ef1fc89db804941f8
+
+602 INFO: PyInstaller: 6.22.2, contrib hooks: 2026.7
+604 INFO: Python: 3.12.10
+630 INFO: Platform: Windows-2025Server-10.0.26100-SP0
+630 INFO: Python environment: C:\hostedtoolcache\windows\Python\3.12.10\x64
+630 INFO: wrote D:\a\htmlgame\htmlgame\launcher\build_tmp\setup\OmniClash-Setup.spec
+634 INFO: Removing temporary files and cleaning cache in C:\Users\runneradmin\AppData\Local\pyinstaller
+2028 INFO: Module search paths (PYTHONPATH):
+['D:\\a\\htmlgame\\htmlgame',
+ 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\python312.zip',
+ 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\DLLs',
+ 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\Lib',
+ 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64',
+ 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\Lib\\site-packages',
+ 'D:\\a\\htmlgame\\htmlgame']
+2292 INFO: Appending 'datas' from .spec
+2293 INFO: checking Analysis
+2293 INFO: Building Analysis because Analysis-00.toc is non existent
+2293 INFO: Looking for Python shared library...
+2293 INFO: Using Python shared library: C:\hostedtoolcache\windows\Python\3.12.10\x64\python312.dll
+2293 INFO: Running Analysis Analysis-00.toc
+2293 INFO: Target bytecode optimization level: 0
+2293 INFO: Initializing module dependency graph...
+2296 INFO: Initializing module graph hook caches...
+2311 INFO: Analyzing modules for base_library.zip ...
+3646 INFO: Processing standard module hook 'hook-encodings.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\Lib\\site-packages\\PyInstaller\\hooks'
+4592 INFO: Processing standard module hook 'hook-math.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\Lib\\site-packages\\PyInstaller\\hooks'
+5882 INFO: Processing standard module hook 'hook-pickle.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\Lib\\site-packages\\PyInstaller\\hooks'
+8052 INFO: Processing standard module hook 'hook-heapq.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\Lib\\site-packages\\PyInstaller\\hooks'
+9018 INFO: Caching module dependency graph...
+9072 INFO: Analyzing D:\a\htmlgame\htmlgame\setup\win_setup_gui.py
+9092 INFO: Processing pre-find-module-path hook 'hook-tkinter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\Lib\\site-packages\\PyInstaller\\hooks\\pre_find_module_path'
+9094 INFO: TclTkInfo: initializing cached Tcl/Tk info...
+9680 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\Lib\\site-packages\\PyInstaller\\hooks'
+10352 INFO: Processing standard module hook 'hook-_ctypes.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\Lib\\site-packages\\PyInstaller\\hooks'
+10357 INFO: Analyzing hidden import 'setup.win_setup_gui'
+10365 INFO: Analyzing hidden import 'tkinter.__main__'
+10367 INFO: Analyzing hidden import 'tkinter.colorchooser'
+10369 INFO: Analyzing hidden import 'tkinter.dnd'
+10377 INFO: Analyzing hidden import 'tkinter.font'
+10385 INFO: Analyzing hidden import 'tkinter.scrolledtext'
+10387 INFO: Analyzing hidden import 'tkinter.tix'
+10464 INFO: Processing module hooks (post-graph stage)...
+10470 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\Lib\\site-packages\\PyInstaller\\hooks'
+10486 INFO: Performing binary vs. data reclassification (947 entries)
+12076 INFO: Looking for ctypes DLLs
+12085 INFO: Analyzing run-time hooks ...
+12085 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+12089 INFO: Including run-time hook 'pyi_rth__tkinter.py' from 'C:\\hostedtoolcache\\windows\\Python\\3.12.10\\x64\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+12117 INFO: Creating base_library.zip...
+12139 INFO: Looking for dynamic libraries
+12276 INFO: Extra DLL search directories (AddDllDirectory): []
+12276 INFO: Extra DLL search directories (PATH): []
+13814 INFO: Warnings written to D:\a\htmlgame\htmlgame\launcher\build_tmp\setup\work\OmniClash-Setup\warn-OmniClash-Setup.txt
+13836 INFO: Graph cross-reference written to D:\a\htmlgame\htmlgame\launcher\build_tmp\setup\work\OmniClash-Setup\xref-OmniClash-Setup.html
+13871 INFO: checking PYZ
+13871 INFO: Building PYZ because PYZ-00.toc is non existent
+13871 INFO: Building PYZ (ZlibArchive) D:\a\htmlgame\htmlgame\launcher\build_tmp\setup\work\OmniClash-Setup\PYZ-00.pyz
+14088 INFO: Building PYZ (ZlibArchive) D:\a\htmlgame\htmlgame\launcher\build_tmp\setup\work\OmniClash-Setup\PYZ-00.pyz completed successfully.
+14157 INFO: checking PKG
+14157 INFO: Building PKG because PKG-00.toc is non existent
+14157 INFO: Building PKG (CArchive) OmniClash-Setup.pkg
+19371 INFO: Building PKG (CArchive) OmniClash-Setup.pkg completed successfully.
+19392 INFO: Bootloader C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+19392 INFO: checking EXE
+19392 INFO: Building EXE because EXE-00.toc is non existent
+19392 INFO: Building EXE from EXE-00.toc
+19392 INFO: Copying bootloader EXE to D:\a\htmlgame\htmlgame\launcher\dist\OmniClash-Setup.exe
+19394 INFO: Copying icon to EXE
+19396 INFO: Copying 0 resources to EXE
+19396 INFO: Embedding manifest in EXE
+19398 INFO: Appending PKG archive to EXE
+19407 INFO: Fixing EXE headers
+19511 INFO: Building EXE from EXE-00.toc completed successfully.
+19530 INFO: Build complete! The results are available in: D:\a\htmlgame\htmlgame\launcher\dist
+C:\hostedtoolcache\windows\Python\3.12.10\x64\python.exe -m PyInstaller --noconfirm --clean --onefile --windowed --name OmniClash-Setup --distpath D:\a\htmlgame\htmlgame\launcher\dist --workpath D:\a\htmlgame\htmlgame\launcher\build_tmp\setup\work --specpath D:\a\htmlgame\htmlgame\launcher\build_tmp\setup --paths D:\a\htmlgame\htmlgame --hidden-import setup --hidden-import setup.win_setup_core --hidden-import setup.win_setup_gui --collect-all tkinter --add-data D:\a\htmlgame\htmlgame\setup;setup D:\a\htmlgame\htmlgame\setup\win_setup_gui.py
+Traceback (most recent call last):
+  File "D:\a\htmlgame\htmlgame\setup\build_windows_setup.py", line 116, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "D:\a\htmlgame\htmlgame\setup\build_windows_setup.py", line 99, in main
+    print(f"OK \u2192 {final} ({final.stat().st_size} bytes)")
+  File "C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 3: character maps to <undefined>
+
+--- launcher/dist ---
+total 12228
+drwxr-xr-x 1 runneradmin 197121        0 Sep 10 22:11 .
+drwxr-xr-x 1 runneradmin 197121        0 Sep 10 22:11 ..
+-rwxr-xr-x 1 runneradmin 197121     1565 Sep 10 22:11 GPG_Setup.py
+-rw-r--r-- 1 runneradmin 197121   129525 Sep 10 22:11 GrandPixelGameLauncher-v3.0.0-portable.zip
+-rw-r--r-- 1 runneradmin 197121   164254 Sep 10 22:11 GrandPixelGameLauncher-v3.1.0-portable.zip
+-rwxr-xr-x 1 runneradmin 197121 12194971 Sep 10 22:11 OmniClash-Setup.exe
+-rwxr-xr-x 1 runneradmin 197121     8815 Sep 10 22:11 win_setup_gui.py
