@@ -9,4 +9,7 @@ launcher/gen/
 launcher/build_tmp/
 launcher/dist/GrandPixelGameLauncher
 launcher/dist/GrandPixelGameLauncher.exe
+launcher/dist/Launcher-Setup
+launcher/dist/Launcher-Setup.exe
+launcher/dist/*.sha256
 versions/*.zip

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 APP_NAME = "GrandPixelGame"
-LAUNCHER_VERSION = "3.1.0"
+LAUNCHER_VERSION = "3.2.0"
 
 
 def app_data_dir() -> Path:

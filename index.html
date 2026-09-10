@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Grand Pixel Game — Setup</title>
+<title>Grand Pixel Game — Download</title>
 <style>
   :root{--bg:#070b14;--gold:#e8b84a;--text:#e8eef8;--muted:#8b97ae;--green:#3dd68c;--panel:#0e1524;--line:#2a3a58}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -13,40 +13,30 @@
   h1{font-size:22px;letter-spacing:.08em;color:var(--gold);margin-bottom:4px}
   h1 span{display:block;color:var(--text);font-size:14px;margin-top:4px;letter-spacing:.12em}
   p{color:var(--muted);line-height:1.55;font-size:14px;margin:10px 0}
-  pre,code{font-family:ui-monospace,Consolas,monospace;background:#05080f;border:1px solid var(--line)}
-  code{padding:1px 6px;font-size:12px;color:var(--gold)}
-  pre{padding:12px 14px;font-size:12px;overflow:auto;color:#c8d0e0;margin:12px 0;line-height:1.5}
-  .btn{display:inline-block;margin:6px 8px 6px 0;padding:12px 18px;background:linear-gradient(#4ae08a,#2bb673);color:#062416;font-weight:800;font-size:13px;letter-spacing:.05em;text-decoration:none;border:2px solid #1a7a4a;box-shadow:0 3px 0 #1a7a4a}
-  .btn.sec{background:#1a2438;color:var(--text);border-color:var(--line);box-shadow:0 3px 0 #0a1018}
+  ol{margin:8px 0 8px 22px;color:var(--muted);font-size:14px;line-height:1.7}
+  .btn{display:inline-block;margin:8px 8px 8px 0;padding:14px 20px;background:linear-gradient(#4ae08a,#2bb673);color:#062416;font-weight:800;font-size:14px;letter-spacing:.04em;text-decoration:none;border:2px solid #1a7a4a;box-shadow:0 3px 0 #1a7a4a}
+  .btn.sec{background:#1a2438;color:var(--text);border-color:var(--line);box-shadow:0 3px 0 #0a1018;font-size:13px;padding:10px 14px}
   .note{font-size:12px;color:var(--muted);margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
-  ol{margin:8px 0 8px 18px;color:var(--muted);font-size:14px;line-height:1.6}
+  code{font-family:ui-monospace,Consolas,monospace;background:#05080f;border:1px solid var(--line);padding:1px 6px;font-size:12px;color:var(--gold)}
 </style>
 </head>
 <body>
 <div class="card">
-  <div class="tag">ONE-CLICK SETUP · NO REPO CLONE</div>
-  <h1>GRAND PIXEL GAME<span>LUMINA ISLE · LAUNCHER 3.1</span></h1>
-  <p>Install a <b>standalone pixel launcher</b> that downloads the game for you and opens it in its <b>own app window</b>.</p>
-
-  <p><b>Windows</b></p>
+  <div class="tag">WINDOWS · ONE FILE · NO TERMINAL</div>
+  <h1>GRAND PIXEL GAME<span>LUMINA ISLE</span></h1>
+  <p><b>Players:</b> download the installer, double-click, play. No Python, no Git, no commands.</p>
   <ol>
-    <li>Install <a href="https://www.python.org/downloads/" style="color:var(--gold)">Python 3</a> (tick “Add to PATH”)</li>
-    <li>Download the setup script and run it</li>
+    <li>Open the latest release on GitHub</li>
+    <li>Download <code>Launcher-Setup.exe</code> from <b>Assets</b></li>
+    <li>Double-click → <b>Install Launcher</b></li>
+    <li>Open the Desktop shortcut → Install &amp; Play in the launcher</li>
   </ol>
-<pre>curl -LO https://raw.githubusercontent.com/Arthurowgg/htmlgame/arena/01a08cbd-htmlgame/setup/GPG_Setup.py
-py GPG_Setup.py</pre>
-
-  <p><b>Linux / macOS</b></p>
-<pre>curl -LO https://raw.githubusercontent.com/Arthurowgg/htmlgame/arena/01a08cbd-htmlgame/setup/GPG_Setup.py
-python3 GPG_Setup.py</pre>
-
-  <a class="btn" href="setup/GPG_Setup.py" download>Download GPG_Setup.py</a>
-  <a class="btn sec" href="versions/3.0.0/">Play Lumina Isle in browser</a>
-  <a class="btn sec" href="game/">Dev game source</a>
-
+  <a class="btn" href="https://github.com/Arthurowgg/htmlgame/releases">Download Launcher-Setup.exe</a>
+  <a class="btn sec" href="versions/3.0.0/">Play in browser</a>
+  <a class="btn sec" href="https://github.com/Arthurowgg/htmlgame">Source</a>
   <p class="note">
-    After setup: open the launcher → choose <code>3.0.0</code> → Install &amp; Play.<br>
-    Already have the repo? <code>.venv/bin/python launcher/run.py</code>
+    Developers: see <code>README.md</code> → section <b>Developers</b>.<br>
+    Installer source: <code>setup/win_setup_gui.py</code> · CI: <code>.github/workflows/build-launcher.yml</code>
   </p>
 </div>
 </body>

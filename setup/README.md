@@ -1,18 +1,37 @@
-# One-click Setup
+# Setup / Installer
 
-You do **not** need to clone the repo.
+## Players (Windows)
 
-## Windows
-1. Install [Python 3.10+](https://www.python.org/downloads/) (tick “Add to PATH”).
-2. Download `GPG_Setup.py` from the release.
-3. Double-click it (or `py GPG_Setup.py`).
-4. It downloads the launcher + game, installs deps, creates a Desktop shortcut.
+1. Download **`Launcher-Setup.exe`** from the [GitHub Release Assets](https://github.com/Arthurowgg/htmlgame/releases)
+2. Double-click it
+3. Click **Install Launcher**
+4. Start the launcher from the Desktop shortcut
 
-## Linux / macOS
-```bash
-curl -LO https://raw.githubusercontent.com/Arthurowgg/htmlgame/arena/01a08cbd-htmlgame/setup/GPG_Setup.py
-python3 GPG_Setup.py
+No Python, no terminal, no clone.
+
+## What the installer does
+
+1. Downloads the launcher + game package from GitHub  
+2. Extracts into `%LOCALAPPDATA%\GrandPixelGame\Launcher\…`  
+3. Installs an **embedded CPython** runtime (user does not install Python)  
+4. `pip install pygame pillow pywebview` into that runtime  
+5. Creates **Desktop** + **Start Menu** shortcuts  
+6. Optionally starts the launcher  
+
+Shared logic: `win_setup_core.py`  
+GUI entry: `win_setup_gui.py`  
+
+## Build the exe (Windows / CI)
+
+```bat
+python setup/build_windows_setup.py
+:: output: launcher\dist\Launcher-Setup.exe
 ```
 
-That’s it — the pixel launcher opens, pick a version → Install & Play.
-The game runs in its **own app window**.
+GitHub Actions (`.github/workflows/build-launcher.yml`) builds on every `launcher-v*` tag and attaches the exe to the release.
+
+## CLI (dev / Linux / macOS)
+
+```bash
+python setup/GPG_Setup.py
+```

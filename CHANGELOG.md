@@ -1,5 +1,13 @@
 # Changelog
 
+## Launcher 3.2.0 — Windows Setup.exe
+
+- **`Launcher-Setup.exe`** — double-click Windows installer (no terminal, no system Python)
+- Shared install core (`setup/win_setup_core.py`) + GUI (`setup/win_setup_gui.py`)
+- Embedded CPython runtime + pygame/pillow/pywebview
+- Desktop + Start Menu shortcuts
+- GitHub Actions workflow builds the exe on `launcher-v*` tags and attaches it to Release **Assets**
+
 ## Launcher 3.1.0 — 2026-09-10
 
 - **One-click Setup** (`setup/GPG_Setup.py`) — downloads everything from GitHub, no clone
