@@ -51,9 +51,30 @@ jobs:
           # tkinter ships with the official Windows Python on GitHub-hosted runners
 
       - name: Build OmniClash-Setup.exe
+        id: build
+        shell: bash
         run: |
-          python setup/build_windows_setup.py
-          dir launcher\dist
+          set -o pipefail
+          python setup/build_windows_setup.py 2>&1 | tee build.log
+          BUILD=$?
+          if [ $BUILD -ne 0 ]; then
+            echo "build_status=failed" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "build_status=ok" >> "$GITHUB_OUTPUT"
+
+      - name: Diagnostics → step summary (always)
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### Build log (tail 160)"
+            echo '```'
+            tail -n 160 build.log 2>/dev/null || echo "(no build.log)"
+            echo '```'
+            echo "### launcher/dist"
+            ls -la launcher/dist 2>/dev/null || echo "(missing)"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify exe exists
         shell: pwsh
