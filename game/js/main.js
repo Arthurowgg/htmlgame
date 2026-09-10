@@ -11,7 +11,7 @@ const MAIN = MAIN_SRC.map(m => Object.assign({}, m, {
   alvo: m.alvo ? m.alvo : m.item ? { item: m.item, n: m.n } : m.boss ? { boss: m.boss } : null,
 }));
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const SEED = 20260908;
 const world = new World(SEED);
 const glCanvas = document.getElementById('gl');
@@ -58,6 +58,9 @@ const colN = {};                                  // coletados por tipo
 const killN = {};                                 // mortes por área
 const talked = { elder: 0, mira: 0, kael: 0 };    // nº de conversas
 const visited = new Set();                        // ids de POIs visitados
+let playTime = 0;                                 // segundos de jogo acumulados
+let deaths = 0;                                   // vezes que a luz apagou
+let medals = [];                                  // conquistas da jornada
 const collected = new Set();                      // seeds de coletáveis
 const chestsOpen = new Set();                     // ids de baús abertos
 const bossKill = { golem: 0, matriarca: 0, guardian: 0 }; // nº de vitórias
@@ -813,6 +816,7 @@ function hurtPlayer(srcX, srcZ) {
   const d = Math.hypot(dx, dz) || 1;
   player.kx = dx / d * 7; player.kz = dz / d * 7;
   if (player.hp <= 0) {
+    deaths++;
     player.hp = player.hpMax;
     player.inv = 3;
     const nearCripta = dist2d(player.x, player.z, -150, 150) < 40;
@@ -1024,7 +1028,7 @@ const SAVE_LEGACY_SOLARIA = 'solaria-save'; // era do título provisório
 function saveGame() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
-      v: 4,
+      v: 5,
       x: Math.round(player.x * 10) / 10, z: Math.round(player.z * 10) / 10,
       hp: player.hp,
       stateM, side, arts,
@@ -1033,13 +1037,14 @@ function saveGame() {
       chests: [...chestsOpen], flags: [...worldFlags],
       bossKill, hearts, qMeta,
       introShown, finaleShown,
+      play: Math.round(playTime), deaths, medals,
       t: time,
     }));
   } catch (e) {}
 }
 function migrateV3(old) {
     const migrate = {
-      v: 4,
+      v: 5,
       x: old.x || 5.5, z: old.z || 5.5, hp: old.hpMax ? Math.min(old.hpMax, old.hp) : 3,
       stateM: new Array(MAIN.length).fill(0),
       side: new Array(SIDE_TOTAL).fill(0),
@@ -1050,6 +1055,7 @@ function migrateV3(old) {
       flags: [], bossKill: { golem: 0, matriarca: 0, guardian: 0 },
       hearts: old.hpBonus ? Math.min(4, old.hpBonus) : 0,
       introShown: true, finaleShown: false,
+      play: Math.round(old.play || 0), deaths: old.deaths || 0, medals: old.medals || [],
     };
     const q0 = old.q ? old.q[0] : 0;
     const q1 = old.q ? old.q[1] : 0;
@@ -1068,13 +1074,13 @@ function loadSave() {
   // chave canônica: v4+ usa direto; v3 (era anterior ao overhaul) migra
   try {
     const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
-    if (d && d.v === 4) return d;
+    if (d && (d.v === 4 || d.v === 5)) return d;
     if (d && d.v === 3) return migrateV3(d);
   } catch (e) {}
   // era do título provisório (saves v4 sob a chave solaria-save)
   try {
     const d = JSON.parse(localStorage.getItem(SAVE_LEGACY_SOLARIA) || 'null');
-    if (d && d.v === 4) return d;
+    if (d && (d.v === 4 || d.v === 5)) return d;
   } catch (e) {}
   return null;
 }
@@ -1092,6 +1098,9 @@ function applySave(d) {
   if (Array.isArray(d.flags)) d.flags.forEach(v => worldFlags.add(v));
   if (d.bossKill) for (const k of Object.keys(d.bossKill)) bossKill[k] = d.bossKill[k];
   if (d.qMeta) for (const k of Object.keys(d.qMeta)) qMeta[k] = d.qMeta[k];
+  playTime = typeof d.play === 'number' ? d.play : 0;
+  deaths = typeof d.deaths === 'number' ? d.deaths : 0;
+  if (Array.isArray(d.medals)) medals = d.medals.slice();
   hearts = d.hearts || 0;
   introShown = !!d.introShown;
   finaleShown = !!d.finaleShown;
@@ -1786,6 +1795,8 @@ function setupInput() {
   $('o-back').addEventListener('click', () => goBackFromOptions());
   $('p-continue').addEventListener('click', () => togglePause());
   $('p-log').addEventListener('click', () => openLog());
+  $('p-stats').addEventListener('click', () => openStats());
+  $('stats-back').addEventListener('click', () => closeStats());
   $('p-options').addEventListener('click', () => { phase = 'pause'; openOptions(); });
   $('p-howto').addEventListener('click', () => { phase = 'pause'; openHowto(); });
   $('p-title').addEventListener('click', () => { saveGame(); toTitle(); });
@@ -1949,6 +1960,8 @@ function loop(now) {
       if (schedSpawn <= 0) { schedSpawn = 5; spawnTick(); }
       questsTick();
     }
+    playTime += dt;
+    medalsTick();
     syncHud();
     syncObjective();
     bossBarSync();
@@ -1989,6 +2002,117 @@ function loop(now) {
     ui.globalAlpha = 1;
   }
 }
+// ---------------- registro de jornada e conquistas ----------------
+const MEDALS = [
+  { id: 'passos',   ic: '\u{1F463}', nome: 'Primeiros Passos',   desc: 'Conclua 3 capítulos da história',      ok: s => s.caps >= 3 },
+  { id: 'andarilho', ic: '\u{1F9ED}', nome: 'Andarilho',          desc: 'Visite 12 pontos marcados no mapa',    ok: s => s.pois >= 12 },
+  { id: 'colecao',  ic: '\u{1F48E}', nome: 'Colecionador',       desc: 'Junte 100 itens coletados',            ok: s => s.items >= 100 },
+  { id: 'cacador',  ic: '\u{2694}',  nome: 'Caçador',            desc: 'Derrote 50 criaturas',                 ok: s => s.kills >= 50 },
+  { id: 'reliquia', ic: '\u{1F3C6}', nome: 'Relicário',          desc: 'Encontre 5 artefatos míticos',         ok: s => s.arts >= 5 },
+  { id: 'gigantes', ic: '\u{1F409}', nome: 'Mata-Gigantes',      desc: 'Derrote os três chefes da ilha',       ok: s => s.bosses >= 3 },
+  { id: 'tempo',    ic: '\u{23F3}',  nome: 'Incansável',         desc: 'Jogue por 30 minutos',                 ok: s => s.minutes >= 30 },
+  { id: 'secund',   ic: '\u{1F4DC}', nome: 'Fazedor de Pedidos', desc: 'Conclua 40 missões secundárias',       ok: s => s.sides >= 40 },
+  { id: 'solaria',  ic: '\u{2600}',  nome: 'Coração de Solaria', desc: 'Zere a história (11 capítulos)',        ok: s => s.caps >= MAIN.length },
+];
+function statsSnapshot() {
+  const caps = stateM.filter(v => v === 2).length;
+  const sides = side.filter(v => v === 2).length;
+  let items = 0;
+  for (const k of Object.keys(colN)) items += colN[k];
+  let kills = 0;
+  for (const k of Object.keys(killN)) kills += killN[k];
+  const bosses = Object.keys(bossKill || {}).filter(k => bossKill[k] > 0).length;
+  return {
+    time: Math.floor(playTime), minutes: Math.floor(playTime / 60), deaths,
+    caps, capsTotal: MAIN.length, sides, sidesTotal: SIDE_TOTAL,
+    arts: arts.length, artsTotal: ARTIFACTS.length,
+    bosses, kills, items, pois: visited.size, poisTotal: POIS.length,
+    colN, killN,
+    medals: MEDALS.map(m => ({ id: m.id, nome: m.nome, desc: m.desc, ic: m.ic, on: medals.includes(m.id) })),
+    earned: medals.length, medalsTotal: MEDALS.length,
+  };
+}
+function fmtTime(sec) {
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s2 = sec % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}min`;
+  if (m > 0) return `${m}min ${String(s2).padStart(2, '0')}s`;
+  return `${s2}s`;
+}
+function checkMedals(quiet) {
+  const snap = statsSnapshot();
+  let novo = null;
+  for (const m of MEDALS) {
+    if (medals.includes(m.id)) continue;
+    if (m.ok(snap)) { medals.push(m.id); novo = m; }
+  }
+  if (novo) {
+    if (!quiet) toastFx(`${novo.ic} conquista: ${novo.nome}`);
+    audio.sfx('seal');
+    saveGame();
+    return novo;
+  }
+  return null;
+}
+let schedMedal = 0.5;
+function medalsTick() {
+  schedMedal -= 1 / 60;
+  if (schedMedal > 0) return;
+  schedMedal = 1.5;
+  checkMedals(false);
+}
+function bar(pct) {
+  const v = Math.max(0, Math.min(100, Math.round(pct * 100)));
+  return `<div class="st-bar"><i style="width:${v}%"></i></div>`;
+}
+function renderStats(root) {
+  const s = statsSnapshot();
+  const cell = (n, l) => `<div class="st-cell"><div class="st-num">${n}</div><div class="st-lbl">${l}</div></div>`;
+  const row = (l, a, b) => `<div class="st-row"><span style="min-width:150px">${l}</span>${bar(b ? a / b : 1)}<b>${a}/${b}</b></div>`;
+  const itens = Object.keys(s.colN).map(k => `${k}: ${s.colN[k]}`).join('  ·  ') || 'nada ainda';
+  root.innerHTML =
+    `<div class="st-head">
+       <span class="st-chip">tempo de jornada: <b>${fmtTime(s.time)}</b></span>
+       <span class="st-chip">conquistas: <b>${s.earned}/${s.medalsTotal}</b></span>
+       <span class="st-chip">a luz apagou <b>${s.deaths}</b> ${s.deaths === 1 ? 'vez' : 'vezes'}</span>
+     </div>
+     <div class="st-grid">
+       ${cell(s.items, 'itens coletados')}
+       ${cell(s.kills, 'criaturas derrotadas')}
+       ${cell(s.bosses, 'chefes derrotados')}
+       ${cell(s.arts, 'artefatos míticos')}
+       ${cell(s.pois + '/' + s.poisTotal, 'pontos descobertos')}
+       ${cell(s.medals.filter(m => m.on).length, 'conquistas ganhas')}
+     </div>
+     <div class="st-sec">Progresso</div>
+     ${row('História', s.caps, s.capsTotal)}
+     ${row('Missões secundárias', s.sides, s.sidesTotal)}
+     ${row('Artefatos', s.arts, s.artsTotal)}
+     ${row('Chefes', s.bosses, 3)}
+     <div class="st-sec">Conquistas</div>
+     <div class="st-medals">
+       ${s.medals.map(m => `<div class="st-medal ${m.on ? 'on' : 'off'}">
+            <span class="ic">${m.on ? m.ic : '\u{1F512}'}</span>
+            <span><span class="nm">${m.nome}</span><span class="ds">${m.on ? 'conquistada' : m.desc}</span></span>
+          </div>`).join('')}
+     </div>
+     <div class="st-sec">Coletas</div>
+     <div class="st-cell"><div class="st-lbl" style="opacity:.9">${itens}</div></div>`;
+}
+function openStats() {
+  if (phase !== 'play' && phase !== 'pause') return;
+  window.__statsFrom = phase;
+  phase = 'stats';
+  showScreen('scr-stats');
+  renderStats($('stats-body'));
+  audio.sfx('select');
+}
+function closeStats() {
+  phase = window.__statsFrom === 'pause' ? 'pause' : 'play';
+  if (phase === 'pause') showScreen('scr-pause');
+  else showScreen(null);
+  saveGame();
+}
+
 function boot() {
   onResize();
   applyCfg();
@@ -2023,6 +2147,10 @@ if (typeof window !== 'undefined') {
     get banner() { return banner; }, get toast() { return toast; },
     get dlg() { return dlg; },
     get enemies() { return enemies; },
-    applySave,
+    applySave, medalDEFs: MEDALS,
+    statsSnapshot, checkMedals, medals: () => medals.slice(),
+    get playTime() { return playTime; },
+    get deaths() { return deaths; },
+    openStats, closeStats, renderStats,
   };
 }

@@ -1,4 +1,5 @@
-.smoke/
+node_modules/
+__pycache__/
 launcher/gen/
 *.pdb
-__pycache__/
+*.pyc

@@ -470,3 +470,30 @@ kbd {
   touch-action: none;
 }
 .tbtn:active { background: rgba(255, 215, 106, 0.35); }
+
+/* ---------- Registro de Jornada (v1.1) ---------- */
+#scr-stats .panel { width: min(880px, 94vw); max-height: 88vh; overflow-y: auto; }
+.st-head { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 14px; }
+.st-chip { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px; padding: 6px 14px; font-size: 13px; color: #cfd7ea; }
+.st-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; }
+.st-cell { background: rgba(255,255,255,.05); border-radius: 12px; padding: 10px 12px; }
+.st-num { font-size: 22px; font-weight: 700; color: #ffd76a; line-height: 1.15; }
+.st-lbl { font-size: 12px; opacity: .72; margin-top: 2px; }
+.st-sec { margin: 18px 0 8px; font-size: 14px; letter-spacing: .04em; text-transform: uppercase;
+  color: #9be8ff; opacity: .9; }
+.st-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; margin-top: 8px; }
+.st-bar > i { display: block; height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, #f3c34e, #ffe9a8); }
+.st-row { display: flex; align-items: center; gap: 10px; margin: 7px 0; font-size: 13px; }
+.st-row .st-bar { flex: 1; margin-top: 0; }
+.st-row b { color: #ffe9a8; min-width: 66px; text-align: right; font-weight: 600; }
+.st-medals { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.st-medal { display: flex; gap: 10px; align-items: flex-start; background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 10px 12px; }
+.st-medal.on { background: linear-gradient(180deg, rgba(243,195,78,.16), rgba(243,195,78,.05));
+  border-color: rgba(243,195,78,.45); }
+.st-medal .ic { font-size: 20px; line-height: 1; }
+.st-medal .nm { font-weight: 600; font-size: 13px; }
+.st-medal .ds { font-size: 12px; opacity: .72; margin-top: 2px; }
+.st-medal.off .ic, .st-medal.off .nm { opacity: .55; }
