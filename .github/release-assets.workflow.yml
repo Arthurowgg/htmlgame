@@ -1,0 +1,107 @@
+# ============================================================================
+#  ATENÇÃO: este arquivo é um workflow PRONTO, guardado fora da pasta
+#  .github/workflows/ porque a ferramenta que mantém este repositório não tem
+#  permissão de criar workflows pelo GitHub.
+#
+#  COMO ATIVAR (no site do GitHub):
+#    1. abra este arquivo e clique no lápis (Edit)
+#    2. troque o nome para  .github/workflows/release-assets.yml  e salve
+#    3. aba Actions → "Arquivos das releases" → Run workflow
+#
+#  A partir daí, TODA tag publicada (launcher-v* ou game-v*) ganha o
+#  executável / o pacote anexado na release automaticamente — e a primeira
+#  execução também preenche as releases antigas que ainda estão sem arquivo.
+# ============================================================================
+name: Arquivos das releases
+
+on:
+  push:
+    tags:
+      - 'launcher-v*'
+      - 'game-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  anexar:
+    name: anexar exe e zip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Anexar os arquivos de cada release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -u
+          git fetch --tags --force --quiet
+
+          titulo() {
+            case "$1" in
+              launcher-v*) echo "Grand Pixel Game Launcher ${1#launcher-v} (Windows)" ;;
+              game-v*)     echo "Grand Pixel Game ${1#game-v} (conteúdo)" ;;
+              *)           echo "$1" ;;
+            esac
+          }
+
+          # caminhos possíveis do arquivo de cada tag (o layout mudou na 1.1.0)
+          candidatos() {
+            case "$1" in
+              launcher-v*)
+                v="${1#launcher-v}"
+                echo "launcher/dist/GrandPixelGameLauncher-v${v}-win64.exe"
+                echo "dist/launcher/GrandPixelGameLauncher-v${v}-win64.exe" ;;
+              game-v*)
+                v="${1#game-v}"
+                echo "game/dist/GrandPixelGame-v${v}-web.zip"
+                echo "dist/game/GrandPixelGame-v${v}-web.zip" ;;
+            esac
+          }
+
+          for tag in $(git tag -l 'launcher-v*' 'game-v*'); do
+            path=""
+            for c in $(candidatos "$tag"); do
+              if git cat-file -e "${tag}:${c}" 2>/dev/null; then path="$c"; break; fi
+            done
+            if [ -z "$path" ]; then
+              echo "== $tag: nenhum arquivo nesta tag (pulado)"
+              continue
+            fi
+
+            nome=$(basename "$path")
+            git show "${tag}:${path}" > "/tmp/${nome}"
+            bytes=$(wc -c < "/tmp/${nome}")
+            echo "== $tag → $nome ($bytes bytes)"
+
+            if ! gh release view "$tag" >/dev/null 2>&1; then
+              notas="release/${tag}.md"
+              if git cat-file -e "${tag}:${notas}" 2>/dev/null; then
+                git show "${tag}:${notas}" > /tmp/notas.md
+              else
+                echo "Versão $tag do Grand Pixel Game." > /tmp/notas.md
+              fi
+              echo "   criando a release"
+              gh release create "$tag" --title "$(titulo "$tag")" --notes-file /tmp/notas.md || true
+            fi
+
+            atual=$(gh release view "$tag" --json assets \
+              --jq ".assets[] | select(.name==\"${nome}\") | .size" 2>/dev/null || echo "")
+            if [ "$atual" = "$bytes" ]; then
+              echo "   já anexado com o mesmo tamanho — nada a fazer"
+              continue
+            fi
+            echo "   enviando o arquivo…"
+            gh release upload "$tag" "/tmp/${nome}" --clobber
+          done
+
+          echo
+          echo "== como ficaram as releases =="
+          for tag in $(gh release list --limit 100 --json tagName --jq '.[].tagName'); do
+            nomes=$(gh release view "$tag" --json assets --jq '[.assets[].name] | join(", ")')
+            echo "  $tag → ${nomes:-sem arquivo}"
+          done
