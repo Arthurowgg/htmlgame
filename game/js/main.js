@@ -6,7 +6,7 @@ import { Renderer, ART } from './renderer.js';
 import { audio } from './audio.js';
 import { clamp, lerp, smoothstep } from './math.js';
 import { PIX, applyPixelScale, readUrlBits } from './pixel.js';
-import { MAP, ZOOMS, drawMinimap, drawBigMap, bigMapPick, bigMapSize, poiIconName } from './minimap.js';
+import { MAP, ZOOMS, drawMinimap, drawBigMap, bigMapPick, bigMapInfo, bigMapSize, poiIconName } from './minimap.js';
 import { drawIcon, iconImg, ICON_SIZE } from './icons.js';
 import { MAIN as MAIN_SRC, SIDE, SIDE_TOTAL, ARTIFACTS, have, rewText, whyLocked } from './quests.js';
 // capítulos usam campos diretos (item/n/boss); normaliza para alvo único
@@ -485,7 +485,7 @@ function onChestOpen(id) {
   const cx = spr ? spr.x : 0, cz = spr ? spr.z : 0;
   burst(cx, groundY(cx, cz) + 1.1, cz, [1, 0.85, 0.4], 18);
   const give = spr ? spr.give : null;
-  if (give === 'heart') { hearts++; refreshHp(); player.hp = player.hpMax; bannerFx('❤ +1 VIDA MÁXIMA  (' + player.hpMax + ')', '#ff7d8a'); audio.sfx('heal'); }
+  if (give === 'heart') { hearts++; refreshHp(); player.hp = player.hpMax; bannerFx('♥ +1 VIDA MÁXIMA  (' + player.hpMax + ')', '#ff7d8a'); audio.sfx('heal'); }
   else if (give === 'cura') { healFull(true); bannerFx('+ CURA TOTAL', '#7de4ff'); }
   else if (give && give[0] === 'a') {
     const a = artOf(give);
@@ -1201,7 +1201,7 @@ function renderSide(c) {
         '<div class="ql-text">' + q.texto + '</div>' +
         (pr && st === 1 ? '<div class="ql-prog">' + pr.cur + '/' + pr.need + '</div>' : '') +
         (st === 2 && q.recompensa ? '<div class="ql-rew">' + rewText(q.recompensa) + ' — concluída</div>' : '') +
-        (st === 0 ? '<div class="ql-why">🔒 ' + whyLocked(q.pre) + '</div>' : '') +
+        (st === 0 ? '<div class="ql-why">' + iconImg('cadeado', 1) + ' ' + whyLocked(q.pre) + '</div>' : '') +
         '</div>';
     }
   }
@@ -1579,30 +1579,26 @@ function drawOverlay() {
   ui.fillStyle = v;
   ui.fillRect(0, 0, W, H);
 }
+// marcador de objetivo em pixel art: losango com contorno, sem brilho difuso
 function drawMarker(x, y, r, col, edge = false) {
+  const s = Math.max(2, Math.round(r / 4));
+  const px = Math.round(x), py = Math.round(y);
   ui.save();
-  ui.translate(x, y);
-  ui.fillStyle = col;
-  ui.shadowColor = col;
-  ui.shadowBlur = 10;
-  ui.beginPath();
-  if (edge) {
-    ui.moveTo(0, -r);
-    ui.lineTo(r, 0);
-    ui.lineTo(0, r);
-    ui.lineTo(-r, 0);
-  } else {
-    for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI * 2 - Math.PI / 2;
-      ui.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-      const b = (i / 4 + 0.5) * Math.PI * 2 - Math.PI / 2;
-      ui.lineTo(Math.cos(b) * r * 0.42, Math.sin(b) * r * 0.42);
+  for (let ring = Math.ceil(r / s); ring >= 1; ring--) {
+    const w = ring * s;
+    const c = edge && ring === Math.ceil(r / s) ? '#fff3d6' : (ring === 1 ? '#fff3d6' : col);
+    for (let i = -w; i <= w; i += s) {
+      const h = Math.abs(i) === w ? 0 : w - Math.abs(i);
+      ui.fillStyle = c;
+      ui.fillRect(px + i, py - h, s, s);
+      ui.fillRect(px + i, py + h - s, s, s);
+      ui.fillRect(px - h, py + i, s, s);
+      ui.fillRect(px + h - s, py + i, s, s);
     }
   }
-  ui.closePath();
-  ui.fill();
   ui.restore();
 }
+
 function mapState() {
   return {
     player, cam, visited, hasLens: have(arts, 'a9'),
@@ -1757,6 +1753,8 @@ function setupInput() {
   $('map-close').addEventListener('click', () => closeMap());
   $('map-back').addEventListener('click', () => closeMap());
   $('bigmap').addEventListener('click', mapClick);
+  $('bigmap').addEventListener('mousemove', mapHover);
+  $('bigmap').addEventListener('mouseleave', () => renderMapSide());
   for (const b of document.querySelectorAll('#map-legend button')) {
     b.addEventListener('click', () => {
       MAP.legend = parseInt(b.dataset.l, 10) || 0;
@@ -1977,15 +1975,15 @@ function loop(now) {
 }
 // ---------------- registro de jornada e conquistas ----------------
 const MEDALS = [
-  { id: 'passos',   ic: '\u{1F463}', nome: 'Primeiros Passos',   desc: 'Conclua 3 capítulos da história',      ok: s => s.caps >= 3 },
-  { id: 'andarilho', ic: '\u{1F9ED}', nome: 'Andarilho',          desc: 'Visite 12 pontos marcados no mapa',    ok: s => s.pois >= 12 },
-  { id: 'colecao',  ic: '\u{1F48E}', nome: 'Colecionador',       desc: 'Junte 100 itens coletados',            ok: s => s.items >= 100 },
-  { id: 'cacador',  ic: '\u{2694}',  nome: 'Caçador',            desc: 'Derrote 50 criaturas',                 ok: s => s.kills >= 50 },
-  { id: 'reliquia', ic: '\u{1F3C6}', nome: 'Relicário',          desc: 'Encontre 5 artefatos míticos',         ok: s => s.arts >= 5 },
-  { id: 'gigantes', ic: '\u{1F409}', nome: 'Mata-Gigantes',      desc: 'Derrote os três chefes da ilha',       ok: s => s.bosses >= 3 },
-  { id: 'tempo',    ic: '\u{23F3}',  nome: 'Incansável',         desc: 'Jogue por 30 minutos',                 ok: s => s.minutes >= 30 },
-  { id: 'secund',   ic: '\u{1F4DC}', nome: 'Fazedor de Pedidos', desc: 'Conclua 40 missões secundárias',       ok: s => s.sides >= 40 },
-  { id: 'solaria',  ic: '\u{2600}',  nome: 'Coração de Solaria', desc: 'Zere a história (11 capítulos)',        ok: s => s.caps >= MAIN.length },
+  { id: 'passos',   ic: 'pegadas',  nome: 'Primeiros Passos',   desc: 'Conclua 3 capítulos da história',      ok: s => s.caps >= 3 },
+  { id: 'andarilho', ic: 'bussola', nome: 'Andarilho',          desc: 'Visite 12 pontos marcados no mapa',    ok: s => s.pois >= 12 },
+  { id: 'colecao',  ic: 'gema',     nome: 'Colecionador',       desc: 'Junte 100 itens coletados',            ok: s => s.items >= 100 },
+  { id: 'cacador',  ic: 'espada',   nome: 'Caçador',            desc: 'Derrote 50 criaturas',                 ok: s => s.kills >= 50 },
+  { id: 'reliquia', ic: 'trofeu',   nome: 'Relicário',          desc: 'Encontre 5 artefatos míticos',         ok: s => s.arts >= 5 },
+  { id: 'gigantes', ic: 'caveira',  nome: 'Mata-Gigantes',      desc: 'Derrote os três chefes da ilha',       ok: s => s.bosses >= 3 },
+  { id: 'tempo',    ic: 'ampulheta', nome: 'Incansável',        desc: 'Jogue por 30 minutos',                 ok: s => s.minutes >= 30 },
+  { id: 'secund',   ic: 'missao',   nome: 'Fazedor de Pedidos', desc: 'Conclua 40 missões secundárias',       ok: s => s.sides >= 40 },
+  { id: 'solaria',  ic: 'sol',      nome: 'Coração de Solaria', desc: 'Zere a história (11 capítulos)',        ok: s => s.caps >= MAIN.length },
 ];
 function statsSnapshot() {
   const caps = stateM.filter(v => v === 2).length;
@@ -2019,7 +2017,7 @@ function checkMedals(quiet) {
     if (m.ok(snap)) { medals.push(m.id); novo = m; }
   }
   if (novo) {
-    if (!quiet) toastFx(`${novo.ic} conquista: ${novo.nome}`);
+    if (!quiet) toastFx(`\u2605 conquista: ${novo.nome}`);
     audio.sfx('seal');
     saveGame();
     return novo;
@@ -2064,7 +2062,7 @@ function renderStats(root) {
      <div class="st-sec">Conquistas</div>
      <div class="st-medals">
        ${s.medals.map(m => `<div class="st-medal ${m.on ? 'on' : 'off'}">
-            <span class="ic">${m.on ? m.ic : '\u{1F512}'}</span>
+            <span class="ic">${m.on ? iconImg(m.ic, 2) : iconImg('cadeado', 2)}</span>
             <span><span class="nm">${m.nome}</span><span class="ds">${m.on ? 'conquistada' : m.desc}</span></span>
           </div>`).join('')}
      </div>
@@ -2161,6 +2159,25 @@ function renderMapSide() {
     });
   }
 }
+function mapHover(ev) {
+  const cv = $('bigmap');
+  if (!cv) return;
+  const r = cv.getBoundingClientRect();
+  const S = bigMapSize();
+  const ix = (ev.clientX - r.left) * (S.w / r.width);
+  const iy = (ev.clientY - r.top) * (S.h / r.height);
+  const info = bigMapInfo(ix, iy, mapState());
+  const sub = $('map-sub');
+  if (!sub) return;
+  if (!info) {
+    renderMapSide();
+    return;
+  }
+  sub.textContent = info.regiao
+    ? info.nome
+    : info.nome + (info.visto ? ' · ' + info.dist + 'm' : ' · não visitado') + ' — clique para marcar destino';
+}
+
 function mapClick(ev) {
   const cv = $('bigmap');
   if (!cv) return;

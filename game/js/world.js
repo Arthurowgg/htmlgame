@@ -90,7 +90,7 @@ export const REGION_COLOR = {
 export const REGION_ICON = { vila: 'V', campo: 'C', clareira: 'L', templo: 'T', floresta: 'F', mina: 'M', praia: 'P', santuario: 'S', recife: 'R', cripta: 'X' };
 
 // estradas: polilinhas (mundo) saindo da vila
-const ROADS = [
+export const ROADS = [
   [[6, 6], [22, 7], [34, 9]],                          // leste → campo
   [[-4, 7], [-14, 14], [-24, 22], [-31, 27]],          // sudoeste → clareira
   [[-4, -6], [-12, -12], [-20, -18], [-26, -22]],      // noroeste → templo
@@ -99,6 +99,13 @@ const ROADS = [
   [[4, 10], [8, 26], [12, 44], [16, 60], [18, 65]],    // sul → praia
   [[12, 7], [30, 4], [48, -2], [64, -12], [72, -17]],  // leste/norte → santuário
 ];
+
+// cor de cada tipo de marco no mapa
+export const LANDMARK_COLOR = {
+  casa: '#ffd76a', torre: '#cfd6e2', fazenda: '#a9d86a', ponte: '#b98a55',
+  caverna: '#a7b0bd', cripta: '#c28aff', templo: '#c9b8ff', farol: '#ffe9a8',
+  tenda: '#ff9a4d', vila: '#ffe0a0', ruina: '#b9a8ff',
+};
 
 export class World {
   constructor(seed) {
@@ -111,6 +118,7 @@ export class World {
     this.CT = new Uint8Array(n * n);
     this.CS = new Uint8Array(n * n);
     this.RK = new Uint8Array(n * n); // 1 = não é terreno natural (construção)
+    this.landmarks = [];             // marcos da ilha (usados pelo mapa)
     this.build();
     this.staticSprites = this.buildSprites();
     this._cache = {};
@@ -192,6 +200,9 @@ export class World {
     this.minePortalCell(70, 92);                  // portal da mina (oeste)
     this.pierCell(108, 129);                      // píer da praia
     this.millCell(104, 90);                       // moinho (nordeste da vila)
+    // 6b) ilha habitada: casas, torres, acampamentos, fazenda e pontes
+    this.buildLandmarks();
+    this.buildBridges();
     // acesso das portas (pequenos caminhos)
     this.roadC([[90, 98], [93, 98], [95, 97]]);
     this.roadC([[95, 90], [95, 92], [94, 94]]);
@@ -440,6 +451,232 @@ export class World {
         this.placeBlock(cx + 1, cz + i, 1, P.WOOD, 0, P.WOODD);
       }
     }
+  }
+
+  // ---- construções maiores (vila, torres, acampamentos, fazenda) ----
+  // casa de verdade: paredes de madeira, janelas, porta e telhado de duas águas
+  houseCell(cx, cz, w = 5, d = 4, hgt = 3) {
+    for (let dz = 0; dz < d; dz++)
+      for (let dx = 0; dx < w; dx++) {
+        const x = cx + dx, z = cz + dz;
+        this.placeBlock(x, z, hgt, P.WOOD, 1, P.WOODD);          // piso
+      }
+    for (let dz = 0; dz < d; dz++)
+      for (let dx = 0; dx < w; dx++) {
+        const x = cx + dx, z = cz + dz;
+        const edge = dx === 0 || dx === w - 1 || dz === 0 || dz === d - 1;
+        const door = dz === d - 1 && dx === ((w / 2) | 0);
+        const win = edge && !door && ((dx + dz) % 2 === 0);
+        if (edge) this.placeBlock(x, z, hgt + 1, win ? P.WIN : P.WOOD, 1, win ? P.WIN : P.WOODD);
+      }
+    // telhado: duas fileiras, a de cima mais estreita
+    for (let dz = -1; dz < d + 1; dz++)
+      for (let dx = -1; dx < w + 1; dx++) {
+        const ridgeRow = dz === ((d / 2) | 0) || dz === ((d / 2) | 0) - 1;
+        this.placeBlock(cx + dx, cz + dz, hgt + 2, P.ROOF, 0, ridgeRow ? P.ROOF : P.ROOFD);
+      }
+    for (let dz = 0; dz < d; dz++)
+      for (let dx = 1; dx < w - 1; dx++)
+        if ((dz + 1) % 3 === 0) this.placeBlock(cx + dx, cz + dz, hgt + 3, P.ROOFD, 0, P.ROOF);
+    // chaminé
+    this.placeBlock(cx + w - 2, cz + 1, hgt + 3, P.STONE, 0, P.STONE);
+    this.placeBlock(cx + w - 2, cz + 1, hgt + 4, P.STONE, 0, P.STONE);
+  }
+  // torre de vigia: base de pedra, varanda de madeira, telhado e mastro
+  towerCell(cx, cz, hgt = 4) {
+    for (let h = 1; h <= hgt; h++)
+      for (let dz = -1; dz <= 1; dz++)
+        for (let dx = -1; dx <= 1; dx++) {
+          const edge = Math.abs(dx) === 1 || Math.abs(dz) === 1;
+          if (!edge) continue;
+          const win = h === hgt - 1 && Math.abs(dx) === 1 && dz === 0;
+          this.placeBlock(cx + dx, cz + dz, h, P.STONE, 1, win ? P.WIN : P.STONE);
+        }
+    for (let dz = -2; dz <= 2; dz++)
+      for (let dx = -2; dx <= 2; dx++)
+        this.placeBlock(cx + dx, cz + dz, hgt + 1, P.WOOD, 0, P.WOODD);
+    for (let h = hgt + 2; h <= hgt + 3; h++)
+      for (let dz = -1; dz <= 1; dz++)
+        for (let dx = -1; dx <= 1; dx++)
+          if (Math.abs(dx) === 1 || Math.abs(dz) === 1) this.placeBlock(cx + dx, cz + dz, h, P.WOOD, 0, P.WOOD);
+    this.placeBlock(cx, cz, hgt + 4, P.ROOF, 0, P.ROOFD);
+    this.placeBlock(cx, cz, hgt + 5, P.WOOD, 0, P.WOODD);
+  }
+  // acampamento: tenda, fogueira, caixotes e cerca
+  campCell(cx, cz) {
+    for (let dz = 0; dz < 3; dz++)
+      for (let dx = 0; dx < 3; dx++) {
+        const edge = dx === 0 || dx === 2 || dz === 0 || dz === 2;
+        if (!edge) continue;
+        this.placeBlock(cx + dx, cz + dz, dz === 1 && dx === 1 ? 2 : 2, P.ROOF, 1, P.ROOFD);
+      }
+    this.placeBlock(cx + 1, cz + 1, 3, P.ROOFD, 0, P.ROOF);
+    // fogueira de pedra com lenha
+    this.placeBlock(cx + 5, cz + 2, 1, P.STONE);
+    this.placeBlock(cx + 5, cz + 2, 2, P.WOOD, 0, P.WOODD);
+    this.placeBlock(cx + 6, cz + 2, 1, P.STONED);
+    this.placeBlock(cx + 4, cz + 1, 1, P.WOOD, 1, P.WOODD);
+    this.placeBlock(cx + 4, cz + 3, 1, P.WOOD, 1, P.WOODD);
+  }
+  // fazenda: cerca, canteiros, celeiro e espantalho
+  farmCell(cx, cz) {
+    const w = 9, d = 7;
+    for (let dz = 0; dz < d; dz++)
+      for (let dx = 0; dx < w; dx++) {
+        const edge = dx === 0 || dx === w - 1 || dz === 0 || dz === d - 1;
+        if (edge) {
+          if ((dx + dz) % 2 === 0) this.placeBlock(cx + dx, cz + dz, 1, P.WOOD, 1, P.WOODD);
+          else if (dz === d - 1 && dx === ((w / 2) | 0)) this.placeBlock(cx + dx, cz + dz, 1, P.PATH, 1, P.PATH);
+          continue;
+        }
+        if (dx % 2 === 1 && dz > 0 && dz < d - 1) {
+          this.placeBlock(cx + dx, cz + dz, 1, P.MOSS, 1, P.MOSS);
+          if (dz % 2 === 1) this.placeBlock(cx + dx, cz + dz, 2, P.MOSS_D, 0, P.MOSS_D);
+        }
+      }
+    this.houseCell(cx + 1, cz + 1, 4, 3, 3);          // celeiro/casa do campo
+    // espantalho
+    this.placeBlock(cx + w - 3, cz + d - 3, 1, P.WOOD, 0, P.WOODD);
+    this.placeBlock(cx + w - 3, cz + d - 3, 2, P.WOOD, 0, P.WOODD);
+    this.placeBlock(cx + w - 4, cz + d - 3, 2, P.WOOD, 0, P.ROOF);
+    this.placeBlock(cx + w - 2, cz + d - 3, 2, P.WOOD, 0, P.ROOF);
+  }
+  // arco de pedra (entrada de ruína/portal) e placa de estrada
+  archCell(cx, cz) {
+    for (let h = 1; h <= 3; h++) {
+      this.placeBlock(cx - 1, cz, h, P.STONE);
+      this.placeBlock(cx + 1, cz, h, P.STONE);
+    }
+    for (let dx = -1; dx <= 1; dx++) this.placeBlock(cx + dx, cz, 4, P.STONED);
+    this.placeBlock(cx, cz, 5, P.STONE);
+  }
+  signCell(cx, cz) {
+    this.placeBlock(cx, cz, 1, P.WOOD, 0, P.WOODD);
+    this.placeBlock(cx, cz, 2, P.WOOD, 0, P.WOODD);
+    this.placeBlock(cx + 1, cz, 2, P.WOOD, 0, P.PATH);
+  }
+  // haste de bandeira/mastro (marcos visíveis de longe)
+  mastCell(cx, cz, hgt = 6, ct = P.WOOD) {
+    for (let h = 1; h <= hgt; h++) this.placeBlock(cx, cz, h, ct, 0, ct);
+  }
+
+  // ---- cercas e pontes (espalhadas pela ilha) ----
+  fenceLine(x0, z0, x1, z1, gapEvery = 5) {
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(z1 - z0));
+    for (let i = 0; i <= n; i++) {
+      const t = n === 0 ? 0 : i / n;
+      const x = Math.round(x0 + (x1 - x0) * t), z = Math.round(z0 + (z1 - z0) * t);
+      if (gapEvery && i % gapEvery === 0) continue;   // portão
+      this.placeBlock(x, z, 1, P.WOOD, 0, P.WOODD);
+    }
+  }
+  // pontes: onde uma estrada atravessa água, entra um deque de madeira com guarda-corpo
+  buildBridges() {
+    for (const road of ROADS) {
+      for (let i = 0; i < road.length - 1; i++) {
+        const [ax, az] = road[i], [bx, bz] = road[i + 1];
+        const len = Math.hypot(bx - ax, bz - az);
+        const steps = Math.ceil(len);
+        let span = null;
+        for (let s = 0; s <= steps; s++) {
+          const t = s / steps;
+          const wx = ax + (bx - ax) * t, wz = az + (bz - az) * t;
+          const water = this.heightAt(wx, wz) <= 0;
+          if (water && !span) span = { s0: s, s1: s, a: [wx, wz] };
+          else if (water && span) span.s1 = s;
+          else if (!water && span) { this.makeBridge(road, i, span, steps); span = null; }
+        }
+        if (span) this.makeBridge(road, i, span, steps);
+      }
+    }
+  }
+  makeBridge(road, i, span, steps) {
+    const [ax, az] = road[i], [bx, bz] = road[i + 1];
+    const mid = (span.s0 + span.s1) / 2 / steps;
+    let dirx = bx - ax, dirz = bz - az;
+    const dl = Math.hypot(dirx, dirz) || 1;
+    dirx /= dl; dirz /= dl;
+    const px = -dirz, pz = dirx;                      // perpendicular
+    const cells = span.s1 - span.s0 + 3;
+    for (let s = span.s0 - 1; s <= span.s1 + 1; s++) {
+      const t = s / steps;
+      const wx = ax + (bx - ax) * t, wz = az + (bz - az) * t;
+      const cx = this.tileAt(wx), cz = this.tileAt(wz);
+      for (let k = -2; k <= 2; k++) {
+        const x = cx + Math.round(px * k), z = cz + Math.round(pz * k);
+        const rail = Math.abs(k) === 2;
+        this.placeBlock(x, z, 2, rail ? P.WOODD : P.WOOD, 1, rail ? P.WOODD : P.WOOD);
+        if (rail && s % 3 === 0) this.placeBlock(x, z, 3, P.WOOD, 0, P.WOODD);
+        if (!rail && s % 4 === 0) this.placeBlock(x, z, 1, P.STONED, 1, P.STONED);  // pilar
+      }
+    }
+    this.pushLandmark(ax + (bx - ax) * mid, az + (bz - az) * mid, 'ponte', 'Ponte de Tábuas');
+  }
+  pushLandmark(x, z, kind, nome) {
+    this.landmarks.push({ x, z, kind, nome, cor: LANDMARK_COLOR[kind] || '#d8c38a' });
+  }
+
+  // ---- a ilha habitada: casas, torres, acampamentos, fazenda ----
+  buildLandmarks() {
+    // vila: casas em volta da praça (o poço, o obelisco e o moinho já existem)
+    this.houseCell(99, 84, 5, 4, 3);
+    this.houseCell(108, 99, 6, 5, 3);
+    this.houseCell(90, 103, 5, 4, 3);
+    this.houseCell(84, 100, 4, 4, 2);
+    this.houseCell(110, 104, 6, 4, 3);
+    this.houseCell(101, 108, 7, 5, 3);
+    this.towerCell(111, 80, 5);                        // torre de vigia da vila
+    this.archCell(88, 104);                            // arco de entrada (sul)
+    this.archCell(112, 96);                            // arco do caminho do leste
+    this.fenceLine(83, 106, 112, 106, 7);              // cerca do pasto ao sul
+    this.fenceLine(112, 106, 112, 99, 0);
+    this.mastCell(94, 88, 7);                          // mastro da praça
+    this.signCell(96, 86);
+    this.signCell(103, 100);
+    // mercado: barracas perto da praça
+    for (const [cx, cz] of [[97, 91], [100, 92], [95, 98]]) {
+      for (let dx = 0; dx <= 2; dx++) {
+        this.placeBlock(cx + dx, cz, 3, P.WOOD, 0, dx === 1 ? P.PATH : P.WOODD);
+        this.placeBlock(cx + dx, cz + 1, 3, P.ROOF, 0, P.ROOFD);
+      }
+      this.placeBlock(cx + 1, cz, 4, P.ROOFD, 0, P.ROOF);
+    }
+    // campo radiante: moinho (existe) + casa de fazenda e horta
+    this.farmCell(97, 103);
+    this.pushLandmark(5, 17, 'fazenda', 'Fazenda do Vale');
+    // floresta: acampamento de caça
+    this.campCell(92, 70);
+    this.pushLandmark(-15, -43, 'casa', 'Acampamento dos Caçadores');
+    // praia: vila de pescadores e o píer existente
+    this.campCell(101, 127);
+    this.houseCell(97, 132, 5, 4, 3);
+    this.pushLandmark(13, 68, 'casa', 'Vila dos Pescadores');
+    // mina: acampamento dos mineradores e torre de apoio
+    this.campCell(66, 96);
+    this.towerCell(62, 90, 4);
+    this.pushLandmark(-57, -4, 'caverna', 'Acampamento da Mina');
+    // santuário: torre no cume
+    this.towerCell(133, 88, 5);
+    this.pushLandmark(75, 9, 'torre', 'Torre do Cume');
+    // marcos da vila no mapa
+    this.pushLandmark(7, -11, 'casa', 'Moinho de Solaria');
+    this.pushLandmark(17, -13, 'casa', 'Bairro do Moinho');
+    this.pushLandmark(29, -5, 'torre', 'Torre de Vigia');
+    this.pushLandmark(-8, 4, 'vila', 'Bairro do Poço');
+    this.pushLandmark(19, 11, 'casa', 'Rua do Mercado');
+    // clareira das lágrimas: acampamento de peregrinos
+    this.campCell(80, 110);
+    this.pushLandmark(-32, 30, 'tenda', 'Acampamento dos Peregrinos');
+    // templo: arco de entrada
+    this.archCell(82, 83);
+    this.pushLandmark(-28, -26, 'templo', 'Arco do Templo');
+    // cripta: mastros de pedra marcando o caminho
+    for (const [wx, wz] of [[-150, 130], [-146, 134], [-154, 134]]) {
+      this.mastCell(this.tileAt(wx), this.tileAt(wz), 5, P.STONED);
+    }
+    this.pushLandmark(-150, 132, 'cripta', 'Entrada da Cripta');
+    // recife: farol já existe (181,16); marca o lugar no mapa
+    this.pushLandmark(170, -160, 'farol', 'Faro do Recife');
   }
 
   // ================= SPRITES ESTÁTICOS =================

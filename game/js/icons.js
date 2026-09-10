@@ -365,6 +365,61 @@ export const ICONS = {
     '..kkkkk..',
     '.........',
   ],
+  cadeado: [
+    '....k....',
+    '...k.k...',
+    '..k...k..',
+    '..k...k..',
+    '.kkkkkkk.',
+    '.ksssssk.',
+    '.ksskksk.',
+    '.ksskksk.',
+    '.kkkkkkk.',
+  ],
+  pegadas: [
+    '..w..w...',
+    '.www.www.',
+    '.www.www.',
+    '..w..w...',
+    '.........',
+    '..w..w...',
+    '.www.www.',
+    '.www.www.',
+    '..w..w...',
+  ],
+  trofeu: [
+    '.kkkkkkk.',
+    '.kyyyyyk.',
+    'kkyyyyykk',
+    'kyyyyyyyk',
+    'kkyyyyykk',
+    '.kyyyyyk.',
+    '..kyyyk..',
+    '...kyk...',
+    '..kkkkk..',
+  ],
+  ampulheta: [
+    'kkkkkkkkk',
+    '.ksssssk.',
+    '..kssyk..',
+    '...kyk...',
+    '...kyk...',
+    '..kyksk..',
+    '.ksssssk.',
+    'kkkkkkkkk',
+    '.........',
+  ],
+  sol: [
+    '....y....',
+    '..y.y.y..',
+    '...yyy...',
+    '.yyyyyyy.',
+    'yyyyyyyyy',
+    '.yyyyyyy.',
+    '...yyy...',
+    '..y.y.y..',
+    '....y....',
+  ],
   bussola: [
     '....k....',
     '...krk...',
@@ -416,14 +471,17 @@ function ensure() {
   return atlas;
 }
 
-// desenha o ícone com o canto superior esquerdo em (x, y), em pixels de jogo
-export function drawIcon(ctx, name, x, y, scale = 1) {
+// desenha o ícone com o canto superior esquerdo em (x, y), em pixels de jogo.
+// size (opcional) força um tamanho em pixels — usar 5 no minimapa deixa o
+// ícone pequeno sem sair da grade de pixels.
+export function drawIcon(ctx, name, x, y, scale = 1, size = 0) {
   const a = ensure();
   const at = a.index[name];
   if (!at) return false;
+  const w = size > 0 ? Math.round(size) : ICON_SIZE * scale;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(a.cv, at[0], at[1], ICON_SIZE, ICON_SIZE,
-    Math.round(x), Math.round(y), ICON_SIZE * scale, ICON_SIZE * scale);
+    Math.round(x), Math.round(y), w, w);
   return true;
 }
 

@@ -1,8 +1,8 @@
 {
-  "tag": "game-v1.1.0",
-  "version": "1.1.0",
-  "asset": "GrandPixelGame-v1.1.0-web.zip",
-  "files": 10,
-  "bytes": 224169,
-  "sha256": "47a15f1ab48cca416e8b3f63b4cbaf990c9a659e1d260f500c4583fd2263d8b5"
+  "tag": "game-v1.2.0",
+  "version": "1.2.0",
+  "asset": "GrandPixelGame-v1.2.0-web.zip",
+  "files": 15,
+  "bytes": 305453,
+  "sha256": "ba09d36635f12a5beefbe605ca4668a074f49ee3b6dd6499aa74205fe5f75a88"
 }

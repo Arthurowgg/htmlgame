@@ -3,7 +3,7 @@
 // mundo): terreno de verdade, estradas, pontos com ícone, bússola, cone de
 // visão e marcador de destino. O mapa grande abre a ilha inteira em 1 pixel
 // por célula do mundo.
-import { CELLS, TS, P, REGIONS, REGION } from './world.js';
+import { CELLS, TS, P, REGIONS, REGION, ROADS } from './world.js';
 import { drawIcon, ICON_SIZE } from './icons.js';
 import { drawText } from './font.js';
 
@@ -20,6 +20,13 @@ export const ZOOMS = [
   { u: 320, lab: '3x', nome: 'ilha' },
 ];
 export const MAP_SIZE = CELLS;   // 1 pixel do mapa = 1 célula do mundo
+
+// cor de cada região na mancha do mapa grande
+const REGION_TINT = {
+  vila: '#ffd76a', campo: '#8cd96a', clareira: '#7ad9e8', templo: '#b394f2',
+  floresta: '#4f9b57', mina: '#a8b0bd', praia: '#ffe0a0', santuario: '#8ecbff',
+  recife: '#5fe0d0', cripta: '#c58cf0',
+};
 
 // ---------------------------------------------------------------- cores ----
 const C = {
@@ -81,6 +88,40 @@ export function islandBitmap(worldObj) {
     }
   }
   g.putImageData(img, 0, 0);
+
+  // estradas por cima: é o que faz o mapa "ler" como mapa de jogo
+  g.strokeStyle = 'rgba(214,186,132,0.85)';
+  g.lineWidth = 1;
+  g.beginPath();
+  for (const road of ROADS) {
+    for (let i = 0; i < road.length - 1; i++) {
+      const [ax, az] = road[i], [bx, bz] = road[i + 1];
+      // mundo → pixel do mapa (1 pixel = 1 célula de 2 unidades)
+      const sx = (ax + CELLS) / 2, sz = (az + CELLS) / 2;
+      const ex = (bx + CELLS) / 2, ez = (bz + CELLS) / 2;
+      g.moveTo(sx, sz);
+      g.lineTo(ex, ez);
+    }
+  }
+  g.stroke();
+  // tracejado fino por cima dá a ideia de trilha batida
+  g.strokeStyle = 'rgba(255,231,180,0.35)';
+  g.beginPath();
+  for (const road of ROADS) {
+    for (let i = 0; i < road.length - 1; i++) {
+      const [ax, az] = road[i], [bx, bz] = road[i + 1];
+      const sx = (ax + CELLS) / 2, sz = (az + CELLS) / 2;
+      const ex = (bx + CELLS) / 2, ez = (bz + CELLS) / 2;
+      const n = Math.max(1, Math.round(Math.hypot(ex - sx, ez - sz)));
+      for (let k = 0; k < n; k += 3) {
+        const t = k / n;
+        g.moveTo(sx + (ex - sx) * t, sz + (ez - sz) * t);
+        g.lineTo(sx + (ex - sx) * t + 0.6, sz + (ez - sz) * t + 0.6);
+      }
+    }
+  }
+  g.stroke();
+
   worldObj._mapBmp = cv;
   return cv;
 }
@@ -171,14 +212,16 @@ export function minimapBox(W, H) {
   return { x, y, w: MW, h: MH, mapX: x + 2, mapY: y + 14, mapW: 88, mapH: 88 };
 }
 
-// desenha um ícone com fundo escuro para dar contraste no mapa
-function iconOn(ctx, name, x, y, scale, dark) {
+// desenha um ícone (tamanho em pixels do jogo) com contorno escuro opcional
+function iconOn(ctx, name, x, y, size, dark) {
   if (dark) {
     ctx.fillStyle = dark;
-    ctx.fillRect(x - scale, y - scale, ICON_SIZE * scale + scale * 2, ICON_SIZE * scale + scale * 2);
+    ctx.fillRect(Math.round(x) - 1, Math.round(y) - 1, size + 2, size + 2);
   }
-  drawIcon(ctx, name, x, y, scale);
+  drawIcon(ctx, name, x, y, 1, size);
 }
+
+const MINI_ICON = 6;   // ícones do minimapa (o do mapa grande é 9)
 
 // ------------------------------------------------------------ minimapa ----
 // st = { player, cam, visited, hasLens, objective, world, dim }
@@ -191,12 +234,15 @@ export function drawMinimap(ctx, W, H, st) {
   // ------ painel
   frame(ctx, box.x, box.y, box.w, box.h);
   const reg = REGION(regionOf(st, st.player.x, st.player.z));
-  const nome = (reg && reg.name) || 'SOLARIA';
+  const zl = z.lab;
+  const zlW = zl.length * 6 + 1;
+  let nome = (reg && reg.name) || 'SOLARIA';
+  const maxNome = Math.floor((box.w - 12 - zlW) / 6);   // fonte 5px + 1 de espaço
+  if (nome.length > maxNome) nome = nome.slice(0, Math.max(3, maxNome - 1)) + '.';
   ctx.fillStyle = '#ffd76a';
   ctx.fillRect(box.x + 3, box.y + 3, 2, 9);
-  drawText(ctx, nome.slice(0, 13), box.x + 7, box.y + 3, 1, '#f2e9d8');
-  const zl = z.lab;
-  drawText(ctx, zl, box.x + box.w - 4 - zl.length * 8, box.y + 3, 1, '#9a91b5');
+  drawText(ctx, nome, box.x + 7, box.y + 3, 1, '#f2e9d8');
+  drawText(ctx, zl, box.x + box.w - 3, box.y + 3, 1, '#9a91b5', { align: 'right' });
 
   // ------ terreno
   const u2t = 1 / TS;                       // unidades de mundo → células
@@ -232,18 +278,8 @@ export function drawMinimap(ctx, W, H, st) {
     if (taken.some(t => Math.abs(t.x - m.x) < 10 && Math.abs(t.y - m.y) < 10)) continue;
     taken.push(m);
     const seen = st.visited.has(p.id);
-    const sc = 1;
-    iconOn(ctx, poiIconName(p), Math.round(m.x - ICON_SIZE / 2), Math.round(m.y - ICON_SIZE / 2 - 3), sc,
-      seen ? null : 'rgba(10,8,20,0.55)');
-    // nome do lugar que já foi descoberto e está perto
-    if (seen && Math.hypot(p.x - st.player.x, p.z - st.player.z) < z.u * 0.45) {
-      const label = p.nome.length > 16 ? p.nome.slice(0, 15) + '.' : p.nome;
-      const tw = label.length * 8;
-      const lx = Math.max(box.mapX + 2, Math.min(box.mapX + inner - tw - 2, m.x - tw / 2));
-      ctx.fillStyle = 'rgba(10,8,20,0.75)';
-      ctx.fillRect(lx - 1, m.y + 7, tw + 2, 9);
-      drawText(ctx, label, lx, m.y + 8, 1, seen ? '#ffe9b0' : '#8f86b8');
-    }
+    iconOn(ctx, poiIconName(p), Math.round(m.x - MINI_ICON / 2), Math.round(m.y - MINI_ICON / 2),
+      MINI_ICON, seen ? null : 'rgba(10,8,20,0.55)');
   }
 
   // ------ construções e marcos da ilha (pontinhos claros)
@@ -266,7 +302,7 @@ export function drawMinimap(ctx, W, H, st) {
     const near = inside(m, 5);
     const mx = Math.max(box.mapX + 5, Math.min(box.mapX + inner - 5, m.x));
     const my = Math.max(box.mapY + 5, Math.min(box.mapY + inner - 5, m.y));
-    iconOn(ctx, 'marcador', Math.round(mx - 4), Math.round(my - 4), 1, near ? null : 'rgba(10,8,20,0.6)');
+    iconOn(ctx, 'marcador', Math.round(mx - 4), Math.round(my - 4), 9, near ? null : 'rgba(10,8,20,0.6)');
   }
 
   // ------ objetivo da missão
@@ -315,14 +351,14 @@ export function drawMinimap(ctx, W, H, st) {
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(yaw + Math.PI / 2);   // 0 = olhando para -Z (norte)
-  ctx.fillStyle = '#1a1428';
-  ctx.fillRect(-4, -5, 8, 10);
+  ctx.fillStyle = '#0a0814';       // contorno forte: o jogador sempre aparece
+  ctx.fillRect(-5, -6, 10, 12);
   ctx.fillStyle = '#fff3d6';
-  ctx.fillRect(-3, -4, 6, 8);
+  ctx.fillRect(-4, -5, 8, 10);
   ctx.fillStyle = '#ffd76a';
-  ctx.fillRect(-2, -3, 4, 5);
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(-1, -4, 2, 2);
+  ctx.fillRect(-2, -3, 4, 6);
+  ctx.fillStyle = '#0a0814';
+  ctx.fillRect(-1, -5, 2, 5);
   ctx.restore();
 
   ctx.restore();   // fim do clip
@@ -368,26 +404,24 @@ export function drawBigMap(ctx, st) {
     return { x: ox + m.x, y: oy + m.z };
   };
 
-  // grade de regiões (terreno): círculos suaves com o nome
-  ctx.globalAlpha = 1;
-  for (const r of st.regions || []) {
-    const m = toMap(r.x, r.z);
-    const rr = Math.max(6, r.r / TS);
-    if (MAP.legend === 0) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+  // regiões: mancha de cor suave (dá relevo ao mapa sem encher de texto)
+  if (MAP.legend === 0) {
+    for (const r of st.regions || []) {
+      const m = toMap(r.x, r.z);
+      const rr = Math.max(6, r.r / TS);
+      const col = REGION_TINT[r.id] || '#ffffff';
+      ctx.globalAlpha = 0.13;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, rr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = col;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(m.x, m.y, rr, 0, Math.PI * 2);
       ctx.stroke();
-    }
-    if (MAP.legend === 0) {
-      const name = r.name.length > 18 ? r.name.slice(0, 17) + '.' : r.name;
-      const tw = name.length * 8;
-      const lx = Math.max(ox + 1, Math.min(ox + mw - tw - 1, m.x - tw / 2));
-      const ly = Math.max(oy + 1, m.y - rr - 10);
-      ctx.fillStyle = 'rgba(8,6,16,0.72)';
-      ctx.fillRect(lx - 1, ly - 1, tw + 2, 10);
-      drawText(ctx, name, lx, ly, 1, '#f0e6cf');
+      ctx.globalAlpha = 1;
     }
   }
 
@@ -407,8 +441,8 @@ export function drawBigMap(ctx, st) {
     const seen = st.visited.has(p.id);
     const sel = MAP.sel === p.id;
     const w = showPts ? 1 : 1;
-    iconOn(ctx, poiIconName(p), Math.round(m.x - ICON_SIZE / 2), Math.round(m.y - ICON_SIZE / 2 - 4), w,
-      seen ? null : 'rgba(8,6,16,0.6)');
+    iconOn(ctx, poiIconName(p), Math.round(m.x - ICON_SIZE / 2), Math.round(m.y - ICON_SIZE / 2 - 2),
+      ICON_SIZE, seen ? null : 'rgba(8,6,16,0.6)');
     if (sel) {
       ctx.strokeStyle = '#ffd76a';
       ctx.lineWidth = 1;
@@ -427,7 +461,7 @@ export function drawBigMap(ctx, st) {
   }
   if (MAP.dest) {
     const m = toMap(MAP.dest.x, MAP.dest.z);
-    iconOn(ctx, 'marcador', Math.round(m.x - 4), Math.round(m.y - 4), 1, null);
+    iconOn(ctx, 'marcador', Math.round(m.x - 4), Math.round(m.y - 4), 9, null);
   }
 
   // jogador: seta branca
@@ -443,6 +477,32 @@ export function drawBigMap(ctx, st) {
   ctx.fillRect(-2, -3, 4, 6);
   ctx.restore();
   return S;
+}
+
+// o que existe num ponto do mapa (para o aviso ao passar o mouse)
+export function bigMapInfo(ix, iy, st) {
+  const S = bigMapSize();
+  const x = ix - S.mapX, y = iy - S.mapY;
+  if (x < 0 || y < 0 || x > S.mapW || y > S.mapH) return null;
+  const w = mapToWorld(x, y);
+  let best = null, bd = 34;      // raio generoso: ícone é pequeno
+  for (const p of st.pois || []) {
+    if (p.oculto && !st.visited.has(p.id) && !st.hasLens) continue;
+    const d = Math.hypot(p.x - w.x, p.z - w.z);
+    if (d < bd) { bd = d; best = p; }
+  }
+  if (best) {
+    const seen = st.visited.has(best.id);
+    const dist = Math.round(Math.hypot(best.x - st.player.x, best.z - st.player.z));
+    return { nome: best.nome, dist, visto: seen, x: best.x, z: best.z, poi: best };
+  }
+  // nenhum ponto: informa a região
+  let reg = null, rd = 1e9;
+  for (const r of st.regions || []) {
+    const d = Math.hypot(r.x - w.x, r.z - w.z);
+    if (d < r.r && d < rd) { rd = d; reg = r; }
+  }
+  return reg ? { nome: reg.name, regiao: true } : null;
 }
 
 // clique no mapa grande → ponto mais próximo (para marcar destino)

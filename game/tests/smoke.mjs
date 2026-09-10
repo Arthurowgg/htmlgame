@@ -281,6 +281,43 @@ if (g) {
           .every(n => ic.ICONS[n]));
   check('ícone vira imagem para o HTML', ic.iconImg('casa', 2).includes('<img'));
 
+  section('fonte de pixel');
+  const fonte = env.instantiate('js/font.js');
+  check('fonte desenha texto e mede', fonte.textWidth('abc', 1) > 0 && fonte.textWidth('abc', 2) > fonte.textWidth('abc', 1));
+  // nada de emoji/símbolo caindo em fonte do sistema: todo caractere usado no
+  // jogo precisa existir na fonte de pixel
+  const usados = new Set();
+  for (const f of ['js/main.js', 'index.html']) {
+    const txt = readFileSync(resolve(root, f), 'utf8');
+    for (const ch of txt) {
+      const code = ch.codePointAt(0);
+      if (code > 126) usados.add(ch);
+    }
+  }
+  const semGlifo = [...usados].filter(ch => !fonte.hasGlyph(ch));
+  check('todo símbolo do jogo tem glifo de pixel', semGlifo.length === 0,
+        semGlifo.map(c => c + ' U+' + c.codePointAt(0).toString(16)).join(' '));
+  check('fonte tem acentos do português',
+        'áàâãéêíóôõúçÁÉÍÓÚÇ'.split('').every(c => fonte.hasGlyph(c)));
+  const wrap = fonte.wrapText('uma frase bem comprida para quebrar em varias linhas curtas', 60, 1);
+  check('quebra de linha respeita a largura', wrap.length > 1 &&
+        wrap.every(l => fonte.textWidth(l, 1) <= 60), JSON.stringify(wrap));
+
+  section('a ilha');
+  const rw = g.world;
+  check('mundo tem marcos para o mapa', Array.isArray(rw.landmarks) && rw.landmarks.length >= 10,
+        String(rw.landmarks && rw.landmarks.length));
+  check('mundo gera rápido (< 1,5 s)', (() => {
+    const t = Date.now();
+    const m = env.instantiate('js/world.js');
+    new m.World(20260908);
+    return Date.now() - t < 1500;
+  })());
+  const kinds = new Set(rw.landmarks.map(l => l.kind));
+  check('marcos variados (casa/torre/ponte/fazenda)', kinds.size >= 5, [...kinds].join(','));
+  check('estradas exportadas para o mapa',
+        env.instantiate('js/world.js').ROADS.length >= 5);
+
   section('salvando');
   g.saveGame();
   const saved = JSON.parse(env.window.localStorage.getItem('grandpixel-save'));

@@ -1,217 +1,176 @@
-// GRAND PIXEL GAME — fonte bitmap auxiliar (glifos 8x8 em bits)
-// Glifos: linha de 8 bits onde o bit 7 (0x80) é o pixel mais à esquerda.
+// GRAND PIXEL GAME — fonte de pixel para o canvas
+// Monta os glifos de js/fontdata.js, cuida dos acentos e desenha textos em
+// qualquer escala inteira, sem suavização: o mesmo desenho que o .ttf usa no
+// HTML (vide tools/build_font.py).
+import {
+  GLYPHS, GLYPH_H, GLYPH_COLS, BASE_ROW,
+  ACCENT_UP, COMPOSED, CEDILHA, DIAERESE,
+} from './fontdata.js';
 
-const G = {}; // char -> array de 8 linhas
+export const FONT_H = GLYPH_H;          // altura de uma linha de texto
+export const FONT_W = GLYPH_COLS + 1;   // avanço de referência (mono)
 
-const defs = {
-  A: [0x3C,0x66,0x66,0x7E,0x66,0x66,0x66,0x00],
-  B: [0x7C,0x66,0x66,0x7C,0x66,0x66,0x7C,0x00],
-  C: [0x3C,0x66,0x60,0x60,0x60,0x66,0x3C,0x00],
-  D: [0x78,0x6C,0x66,0x66,0x66,0x6C,0x78,0x00],
-  E: [0x7E,0x60,0x60,0x7C,0x60,0x60,0x7E,0x00],
-  F: [0x7E,0x60,0x60,0x7C,0x60,0x60,0x60,0x00],
-  G: [0x3C,0x66,0x60,0x6E,0x66,0x66,0x3E,0x00],
-  H: [0x66,0x66,0x66,0x7E,0x66,0x66,0x66,0x00],
-  I: [0x7E,0x18,0x18,0x18,0x18,0x18,0x7E,0x00],
-  J: [0x1E,0x0C,0x0C,0x0C,0x0C,0x6C,0x38,0x00],
-  K: [0x66,0x6C,0x78,0x70,0x78,0x6C,0x66,0x00],
-  L: [0x60,0x60,0x60,0x60,0x60,0x60,0x7E,0x00],
-  M: [0x63,0x77,0x7F,0x6B,0x63,0x63,0x63,0x00],
-  N: [0x63,0x73,0x7B,0x7F,0x6F,0x67,0x63,0x00],
-  O: [0x3C,0x66,0x66,0x66,0x66,0x66,0x3C,0x00],
-  P: [0x7C,0x66,0x66,0x7C,0x60,0x60,0x60,0x00],
-  Q: [0x3C,0x66,0x66,0x66,0x6A,0x6C,0x36,0x00],
-  R: [0x7C,0x66,0x66,0x7C,0x6C,0x66,0x66,0x00],
-  S: [0x3C,0x66,0x60,0x3C,0x06,0x66,0x3C,0x00],
-  T: [0x7E,0x18,0x18,0x18,0x18,0x18,0x18,0x00],
-  U: [0x66,0x66,0x66,0x66,0x66,0x66,0x3C,0x00],
-  V: [0x66,0x66,0x66,0x66,0x66,0x3C,0x18,0x00],
-  W: [0x63,0x63,0x63,0x6B,0x7F,0x77,0x63,0x00],
-  X: [0x66,0x66,0x3C,0x18,0x3C,0x66,0x66,0x00],
-  Y: [0x66,0x66,0x3C,0x18,0x18,0x18,0x18,0x00],
-  Z: [0x7E,0x06,0x0C,0x18,0x30,0x60,0x7E,0x00],
-  '0': [0x3C,0x66,0x6E,0x76,0x66,0x66,0x3C,0x00],
-  '1': [0x18,0x38,0x18,0x18,0x18,0x18,0x3C,0x00],
-  '2': [0x3C,0x66,0x06,0x0C,0x30,0x60,0x7E,0x00],
-  '3': [0x3C,0x66,0x06,0x1C,0x06,0x66,0x3C,0x00],
-  '4': [0x0C,0x1C,0x2C,0x4C,0x7E,0x0C,0x0C,0x00],
-  '5': [0x7E,0x60,0x60,0x7C,0x06,0x66,0x3C,0x00],
-  '6': [0x3C,0x66,0x60,0x7C,0x66,0x66,0x3C,0x00],
-  '7': [0x7E,0x06,0x0C,0x18,0x30,0x30,0x30,0x00],
-  '8': [0x3C,0x66,0x66,0x3C,0x66,0x66,0x3C,0x00],
-  '9': [0x3C,0x66,0x66,0x3E,0x06,0x66,0x3C,0x00],
-  ' ': [0,0,0,0,0,0,0,0],
-  '.': [0,0,0,0,0,0,0x0C,0x0C],
-  ',': [0,0,0,0,0,0x0C,0x0C,0x18],
-  '!': [0x18,0x18,0x18,0x18,0x18,0x00,0x18,0x18],
-  '?': [0x3C,0x66,0x06,0x0C,0x18,0x00,0x18,0x00],
-  ':': [0,0,0x0C,0x0C,0,0x0C,0x0C,0],
-  ';': [0,0,0x0C,0x0C,0,0x0C,0x0C,0x18],
-  '-': [0,0,0,0x7E,0,0,0,0],
-  '·': [0,0,0,0x18,0x18,0,0,0],
-  '—': [0,0,0,0x7E,0,0,0,0],
-  '★': [0,0x08,0x1C,0x3E,0x7F,0x1C,0x08,0],
-  '+': [0,0,0x18,0x7E,0x18,0,0,0],
-  '_': [0,0,0,0,0,0,0,0x7E],
-  '/': [0x06,0x0C,0x0C,0x18,0x18,0x30,0x30,0x60],
-  '\\': [0x60,0x30,0x30,0x18,0x18,0x0C,0x0C,0x06],
-  '|': [0x18,0x18,0x18,0x18,0x18,0x18,0x18,0x18],
-  '(': [0x0C,0x18,0x18,0x18,0x18,0x18,0x0C,0x00],
-  ')': [0x30,0x18,0x18,0x18,0x18,0x18,0x30,0x00],
-  '[': [0x3C,0x30,0x30,0x30,0x30,0x30,0x3C,0x00],
-  ']': [0x3C,0x0C,0x0C,0x0C,0x0C,0x0C,0x3C,0x00],
-  "'": [0x18,0x18,0x18,0,0,0,0,0],
-  '"': [0x36,0x36,0x36,0,0,0,0,0],
-  '`': [0x30,0x18,0x0C,0,0,0,0,0],
-  '~': [0,0,0,0x33,0x4C,0,0,0],
-  '=': [0,0,0x7E,0,0,0x7E,0,0],
-  '<': [0x0C,0x18,0x30,0x60,0x30,0x18,0x0C,0],
-  '>': [0x30,0x18,0x0C,0x06,0x0C,0x18,0x30,0],
-  '&': [0x38,0x6C,0x6C,0x38,0x6C,0x6C,0x36,0x00],
-  '#': [0x24,0x7E,0x24,0x24,0x24,0x7E,0x24,0x00],
-  '*': [0,0x24,0x18,0x7E,0x18,0x24,0,0],
-  '^': [0x08,0x1C,0x36,0,0,0,0,0],
-  '°': [0x38,0x44,0x44,0x38,0,0,0,0],
-  '´': [0x0C,0x18,0x18,0,0,0,0,0],
-};
+const G = {};        // char → { rows: [...], w: número de colunas usadas }
 
-// acento → bits na linha extra do topo
-const ACCENT = {
-  'Á':0x30,'É':0x30,'Í':0x30,'Ó':0x30,'Ú':0x30,
-  'Â':0x3C,'Ê':0x3C,'Ô':0x3C,
-  'Ã':0x36,'Õ':0x36,
-  'À':0x18,
-  'á':0x30,'é':0x30,'í':0x30,'ó':0x30,'ú':0x30,
-  'â':0x3C,'ê':0x3C,'ô':0x3C,
-  'ã':0x36,'õ':0x36,
-  'à':0x18,
-};
-const BASE = {
-  'Á':'A','É':'E','Í':'I','Ó':'O','Ú':'U',
-  'Â':'A','Ê':'E','Ô':'O',
-  'Ã':'A','Õ':'O',
-  'À':'A',
-  'á':'A','é':'E','í':'I','ó':'O','ú':'U',
-  'â':'A','ê':'E','ô':'O',
-  'ã':'A','õ':'O',
-  'à':'A',
-  'Ç':'C','ç':'C',
-};
-const CEDIL = { 'Ç':0x0E, 'ç':0x0E }; // ce cedilha simples
+function rowBits(str) { return str.split(''); }
 
-function putBase(ch) {
-  if (G[ch]) return;
-  const up = ch.toUpperCase();
-  if (G[up]) { G[ch] = G[up]; return; }
-  // deriva minúsculas como maiúsculas
-  const def = defs[up];
-  if (def) G[ch] = def.slice();
-}
-
-function compose(ch) {
-  const base = G[BASE[ch]];
-  if (!base) return;
-  // desloca o glifo 1px para baixo e insere o acento no topo
-  const rows = [ACCENT[ch] || 0, ...base.slice(0, 7)];
-  if (CEDIL[ch]) rows[7] |= CEDIL[ch];
-  G[ch] = rows;
-}
-
-for (const k in defs) G[k] = defs[k].slice();
-for (const c of 'abcdefghijklmnopqrstuvwxyz') if (!G[c]) putBase(c);
-for (const k in ACCENT) compose(k);
-for (const k in CEDIL) compose(k);
-
-export const FONT_W = 8;
-export const FONT_H = 8;
-
-export function glyphRows(ch) { return G[ch] || G['?']; }
-
-export function textWidth(str, scale) {
-  return str.length * FONT_W * scale;
-}
-
-// Quebra texto (sem códigos de cor) em linhas de largura máxima px, escala dada.
-export function wrapText(str, maxPx, scale) {
-  const lines = [];
-  const maxChars = Math.max(1, Math.floor(maxPx / (FONT_W * scale)));
-  const paras = String(str).split('\n');
-  for (const para of paras) {
-    if (para.length === 0) { lines.push(''); continue; }
-    const words = para.split(/(\s+)/);
-    let cur = '';
-    for (const w of words) {
-      if (!w) continue;
-      if (cur.length && (cur + w).length > maxChars) {
-        if (cur.trim()) lines.push(cur.replace(/\s+$/, ''));
-        cur = w;
-      } else cur += w;
-      while (cur.length > maxChars) {
-        lines.push(cur.slice(0, maxChars));
-        cur = cur.slice(maxChars);
-      }
+function addGlyph(ch, rows) {
+  let w = 0;
+  for (const r of rows) {
+    for (let i = r.length - 1; i >= 0; i--) {
+      if (r[i] === '#') { if (i + 1 > w) w = i + 1; break; }
     }
-    if (cur.trim()) lines.push(cur.replace(/\s+$/, ''));
+  }
+  G[ch] = { rows, w };
+}
+
+// glifos de base
+for (const ch of Object.keys(GLYPHS)) addGlyph(ch, GLYPHS[ch].split('/'));
+
+// acentuadas: desce a base uma linha e escreve o acento por cima
+function compose(ch, baseCh, accentCh) {
+  const base = G[baseCh] || G['?'];
+  const rows = base.rows.slice(1);
+  rows.unshift('.....');
+  const acc = accentCh === 'ç' ? CEDILHA
+    : accentCh === '¨' ? DIAERESE
+      : (ACCENT_UP[accentCh] || '').split('/');
+  if (accentCh === 'ç') {
+    // cedilha embaixo, sem deslocar a letra
+    const b = G[baseCh].rows.slice();
+    b[GLYPH_H - 1] = CEDILHA.split('/')[GLYPH_H - 1];
+    G[ch] = { rows: b, w: G[baseCh].w };
+    return;
+  }
+  const upper = baseCh === baseCh.toUpperCase();
+  const line = upper ? 0 : 1;
+  if (acc.length === GLYPH_H) {
+    const merged = rows.slice();
+    merged[line] = merged[line].split('').map((c, i) => (acc[line][i] === '#' ? '#' : c)).join('');
+    G[ch] = { rows: merged, w: Math.max(base.w, accWidth(acc)) };
+    return;
+  }
+  G[ch] = { rows, w: base.w };
+}
+function accWidth(acc) {
+  let w = 0;
+  for (const r of acc) {
+    for (let i = r.length - 1; i >= 0; i--) if (r[i] === '#') { w = Math.max(w, i + 1); break; }
+  }
+  return w;
+}
+for (const ch of Object.keys(COMPOSED)) compose(ch, COMPOSED[ch][0], COMPOSED[ch][1]);
+
+// maiúsculas pequenas viram maiúsculas; o que faltar vira '?'
+function glyph(ch) {
+  if (G[ch]) return G[ch];
+  const up = ch.toUpperCase();
+  if (G[up]) return G[up];
+  return G['?'];
+}
+
+export function glyphRows(ch) { return glyph(ch).rows; }
+export function hasGlyph(ch) { return !!G[ch]; }
+export function glyphChars() { return Object.keys(G); }
+export function glyphWidth(ch) { return ch === ' ' ? 3 : glyph(ch).w; }
+
+// largura de um texto em pixels de jogo (escala 1)
+export function textWidth(str, scale = 1) {
+  let w = 0;
+  for (const ch of String(str)) w += glyphWidth(ch) + 1;
+  return (w > 0 ? w - 1 : 0) * scale;
+}
+
+export function textHeight(scale = 1) { return FONT_H * scale; }
+
+// quebra em linhas que caibam em maxPx (pixels de jogo), respeitando palavras
+export function wrapText(str, maxPx, scale = 1) {
+  const lines = [];
+  const maxW = Math.max(1, Math.floor(maxPx / scale));
+  for (const para of String(str).split('\n')) {
+    if (!para) { lines.push(''); continue; }
+    let cur = '';
+    for (const word of para.split(' ')) {
+      const test = cur ? cur + ' ' + word : word;
+      if (textWidth(test, 1) <= maxW) { cur = test; continue; }
+      if (cur) lines.push(cur);
+      cur = '';
+      let w = word;
+      while (textWidth(w, 1) > maxW && w.length > 1) {
+        let cut = w.length;
+        while (cut > 1 && textWidth(w.slice(0, cut), 1) > maxW) cut--;
+        lines.push(w.slice(0, cut));
+        w = w.slice(cut);
+      }
+      cur = w;
+    }
+    if (cur) lines.push(cur);
   }
   return lines;
 }
 
-function drawOne(ctx, rows, x, y, s, color) {
-  ctx.fillStyle = color;
-  for (let r = 0; r < 8; r++) {
-    let bits = rows[r];
-    if (!bits) continue;
-    for (let c = 0; c < 8; c++) {
-      if ((bits >> (7 - c)) & 1) {
-        ctx.fillRect(x + c * s, y + r * s, s, s);
-      }
+// desenha um glifo: cada '#' vira um quadrado de lado "s" (escala)
+function drawGlyph(ctx, g, x, y, s, color) {
+  const w = g.w, h = GLYPH_H;
+  let py = 0;
+  for (const row of g.rows) {
+    for (let px = 0; px < w; px++) {
+      if (row[px] !== '#') continue;
+      // junta pixels vizinhos na horizontal para desenhar menos retângulos
+      let run = 1;
+      while (px + run < w && row[px + run] === '#') run++;
+      ctx.fillStyle = color;
+      ctx.fillRect(x + px * s, y + py * s, run * s, s);
+      px += run - 1;
     }
+    py++;
   }
 }
 
-// Texto com suporte a cor #RRGGBB inline, sombra e quebra de linha simples.
-export function drawText(ctx, str, x, y, scale, color, opts = {}) {
+/**
+ * Texto com a fonte de pixel.
+ * opts: { align: 'left'|'center'|'right', shadow: cor, outline: cor,
+ *         max: largura máxima (quebra), line: altura extra entre linhas,
+ *         bg: cor de fundo, pad: folga do fundo }
+ */
+export function drawText(ctx, str, x, y, scale = 1, color = '#fff', opts = {}) {
   const s = Math.max(1, Math.round(scale));
-  ctx.save();
-  let px = x;
-  const shadow = opts.shadow !== false;
-  const flush = (seg, segStartX, colorHex) => {
-    if (!seg || !seg.length) return;
-    const w = seg.length * FONT_W * s;
-    if (shadow) {
-      let sx = segStartX + s;
-      ctx.fillStyle = 'rgba(0,0,0,0.75)';
-      for (const ch of seg) { drawOne(ctx, glyphRows(ch), sx, y + s, s, ctx.fillStyle); sx += FONT_W * s; }
+  const text = String(str == null ? '' : str);
+  const lines = opts.max ? wrapText(text, opts.max, s) : text.split('\n');
+  const lineH = (FONT_H + (opts.line === undefined ? 2 : opts.line)) * s;
+  let cy = y;
+  ctx.imageSmoothingEnabled = false;
+  for (const ln of lines) {
+    const w = textWidth(ln, s);
+    let cx = x;
+    if (opts.align === 'center') cx = x - Math.round(w / 2);
+    else if (opts.align === 'right') cx = x - w;
+    if (opts.bg) {
+      const pad = (opts.pad === undefined ? 2 : opts.pad) * s;
+      ctx.fillStyle = opts.bg;
+      ctx.fillRect(cx - pad, cy - pad, w + pad * 2, FONT_H * s + pad * 2);
     }
-    ctx.fillStyle = colorHex;
-    let cx = segStartX;
-    for (const ch of seg) { drawOne(ctx, glyphRows(ch), cx, y, s, ctx.fillStyle); cx += FONT_W * s; }
-    return w;
-  };
-  let segStartX = px, seg = '', segColor = color, colorHex = color;
-  for (let i = 0; i < str.length; i++) {
-    const ch = str[i];
-    if (ch === '\n') {
-      flush(seg, segStartX, segColor);
-      seg = '';
-      px = x;
-      y += (FONT_H + 2) * s;
-      segStartX = px;
-      continue;
+    if (opts.outline) {
+      const oc = opts.outline;
+      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        drawLine(ctx, ln, cx + dx * s, cy + dy * s, s, oc);
+      }
+    } else if (opts.shadow) {
+      drawLine(ctx, ln, cx + s, cy + s, s, opts.shadow);
     }
-    const m = ch === '#' ? /^#[0-9A-Fa-f]{6}/.exec(str.slice(i)) : null;
-    if (m) {
-      flush(seg, segStartX, segColor);
-      seg = '';
-      segColor = '#' + str.slice(i + 1, i + 7);
-      px += FONT_W * s;
-      i += 6;
-      segStartX = px;
-      continue;
-    }
-    seg += ch;
-    px += FONT_W * s;
+    drawLine(ctx, ln, cx, cy, s, color);
+    cy += lineH;
   }
-  flush(seg, segStartX, segColor);
-  ctx.restore();
+  return cy - y;
 }
+
+function drawLine(ctx, str, x, y, s, color) {
+  let cx = x;
+  for (const ch of str) {
+    drawGlyph(ctx, glyph(ch), cx, y, s, color);
+    cx += (glyphWidth(ch) + 1) * s;
+  }
+}
+
+// usados por quem quiser medir antes de desenhar
+export { BASE_ROW };

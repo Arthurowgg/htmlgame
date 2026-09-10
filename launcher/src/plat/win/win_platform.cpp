@@ -577,6 +577,9 @@ public:
     if (e == "ogg") return "audio/ogg";
     if (e == "wav") return "audio/wav";
     if (e == "woff2") return "font/woff2";
+    if (e == "woff") return "font/woff";
+    if (e == "ttf") return "font/ttf";
+    if (e == "otf") return "font/otf";
     if (e == "txt") return "text/plain; charset=utf-8";
     if (e == "map") return "application/json";
     return "application/octet-stream";

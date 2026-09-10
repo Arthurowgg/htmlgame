@@ -14,14 +14,17 @@ export const PIX = {
   compat: false,
 };
 
-// escala base pela altura da janela; ajustada pela opção de "Pixels" e pela
-// compatibilidade. Sempre inteira, sempre >= 2 (senão não parece pixel).
+// A tela do jogo mira ~360 linhas de altura (640x360 numa janela 1080p): é o
+// ponto em que a arte de pixel fica nítida e a interface continua legível.
+// A opção "Pixels" e o modo compatibilidade mexem nessa escala, sempre em
+// números inteiros.
+export const TARGET_ROWS = 360;
 function pickScale(winW, winH, quality, compat) {
-  let s = winH >= 1200 ? 5 : winH >= 900 ? 4 : winH >= 650 ? 3 : 2;
-  // qualidade alta = pixels menores (mais detalhe); baixa = mais grossos
-  if (quality === 0) s += 1;
-  else if (quality === 2) s -= 1;
-  if (winW < 900 && s > 3) s -= 1;
+  let s = Math.max(2, Math.floor(winH / TARGET_ROWS));
+  if (quality === 0) s += 1;         // Grossos: menos resolução, pixels maiores
+  else if (quality === 2) s -= 1;    // Finos: mais resolução
+  if (winW < 900 && s > 3) s -= 1;   // janela estreita não aguenta tanto pixel
+  if (winH < 500) s = 2;
   if (compat) s = Math.max(2, s - 1);
   return Math.max(2, Math.min(6, s));
 }
